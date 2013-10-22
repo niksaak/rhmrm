@@ -1,11 +1,12 @@
 
 RHMRM - RISCy Handmaid Multistack Register Machine Specification
-Version 0.1.18
+Version 0.1.19
 
 ##### SUMMARY ##############################################################
 
 + 16 bit bytes|words
-+ 32 general registers
++ 31 general registers
++ Zero register            (r0)
 + Program Counter register (PC)
 + Status register          (ST)
 
@@ -15,7 +16,8 @@ Conventional register purposes:
 
  ID      | DESCRIPTION         | NAME  | SAVER
 ---------+---------------------+-------+-------
- r0        always zero           zr      n/a
+ r0      | always zero         | zr    | n/a
+
  r1        return address        ra      caller
  r2-r10    saved registers       s0-s7   callee
  r11-r17   temporary registers   t0-t7   caller
@@ -30,16 +32,19 @@ Conventional register purposes:
 ##### OPCODES ##############################################################
 
  ID | OPERATOR | EFFECT                               | DESCRIPTION
- ---+-----------+-------------               ---------+---------
- 01 | mov a, b | Ra := Rb                             | MOVe register
+ ---+----------+-----------                  ---------+---------
+    |          |                                      |
+ 0 - Moving things:
+ 01 | mov a, b | Ra := Rb                               MOVe register
  02 | mtc a, b | Ca := Rb                               Move To Control
  03 | mfc a, b | Ra := Cb                               Move From Control
-
+    |          |
  04 | str a, b | [Ra] := Rb                             SToRe
  05 | psh a, b | Ra := Ra - 1, [Ra] := Rb               PuSH
  06 | loa a, b | Ra := [Rb]                             LOAd
  07 | pop a, b | Ra := [Rb], Ra := Ra + 1               POP
-
+    |          |
+ 1 - Arithmetic things:
  10 | add a, b | Ra := Ra + Rb                          ADD
  11 | adc a, b | Ra := Ra + Rb + C                      ADd with Carry
  12 | sub a, b | Ra := Ra - Rb                          SUBtract
@@ -50,7 +55,8 @@ Conventional register purposes:
  17 | dvi a, b | Ra := Ra / Rb                          DiVide sIgned
  18 | mod a, b | Ra := Ra % Rb                          MODulo
  19 | mdi a, b | Ra := Ra % Rb                          MoDulo sIgned
-
+    |          |
+ 2 - Logicing things:
  20 | and a, b | Ra := Ra & Rb                          logical AND
  21 | ior a, b | Ra := Ra | Rb                          Inclusive OR
  22 | xor a, b | Ra := Ra ^ Rb                          eXclusive OR
@@ -59,12 +65,13 @@ Conventional register purposes:
  25 | shr a, b | Ra := Ra >> Rb                         SHift Right
  26 | rol a, b | Ra := (Ra << Rb) & (Ra >> (16 - Rb))   ROtate Left
  27 | ror a, b | Ra := (Ra >> Rb) & (Ra << (16 - Rb))   ROtate Right
-
+    |          |
  28 | tst a, b | ST := (and a, b)                       TeST bits
  29 | teq a, b | ST := (xor a, b)                       Test bitwise EQuality
  2a | cmp a, b | ST := (sub a, b)                       CoMPare
  2b | cmn a, b | ST := (add a, b)                       ComPare Negative
-
+    |          |
+ 3 - Jumping things:
  30 | jmp c    | PC := PC + c                           Jump Near
  31 | jle c    | N       ? (jpn c)                      Jump if LEsser
  32 | jng c    | N | Z   ? (jpn c)                      Jump if Not Greater
@@ -76,9 +83,10 @@ Conventional register purposes:
  38 | jno c    | !O      ? (jpn c)                      Jump if Not Overflow
  39 | jca c    | C       ? (jpn c)                      Jump if CArry
  3a | jnc c    | !C      ? (jpn c)                      Jump if Not Carry
-
+    |          |
  3b | int c    | trigger interrupt with message c       INTerrupt
-
+    |          |
+ 3E - Weird thing:
  3e | set a, b, n1, n2 | Ra := n1, Rb := n2             SET
  3e | jsc b, n         | PC := n, Rb := PC              Jump Saving Counter
  3e | spc n            | PC := n                        Set PC
@@ -97,13 +105,15 @@ Following flags are set when a global register is loaded with new value:
 ##### INSTRUCTIONS #########################################################
 
 Each instruction (except SET) is 16 bit word.
+
 In opcode descriptions:
 
 + Opcode mnemonic corresponds to bits [6:0] of instruction;
 
-+ 'a' and 'b' hold 5-bit register indices (in range 0-31);
++ 'a' and 'b' hold 5-bit register indices (in range [0,31]);
 + 'a' corresponds to bits [9:5] of instruction;
 + 'b' corresponds to bits [15:10] of instruction;
+  increment PC by 2.
 
 + 'c' holds 10-bit value, signed for conditional jumps, unsigned for
   interrupt instruction;
@@ -113,7 +123,7 @@ In opcode descriptions:
 + JSP instruction is a special case of SET with a = 0;
 + SPC instruction is a special case of SET with a and b equal 0.
 
-##### 3E OPCODE LOGIC ######################################################
+##### <3E> OPCODE LOGIC ####################################################
 
 For instruction '<3e> a, b':
 + if neither a or b is r0, set Ra to a next word, set Rb to a word after
