@@ -19,8 +19,8 @@ Conventional register purposes:
  r0      | always zero         | zr    | n/a
 
  r1        return address        ra      caller
- r2-r10    saved registers       s0-s7   callee
- r11-r17   temporary registers   t0-t7   caller
+ r2-r9     saved registers       s0-s7   callee
+ r10-r17   temporary registers   t0-t7   caller
  r18-r21   return values         v0-v3   caller
  r22-r29   function arguments    a0-a7   caller
  r30       frame pointer         fp      callee
@@ -61,7 +61,7 @@ Conventional register purposes:
  21 | ior a, b | Ra := Ra | Rb                          Inclusive OR
  22 | xor a, b | Ra := Ra ^ Rb                          eXclusive OR
  23 | shl a, b | Ra := Ra << Rb                         SHift Left
- 24 | ahr a, b | Ra := Ra >> Rb                         Arithmetic Shift Right
+ 24 | asr a, b | Ra := Ra >> Rb                         Arithmetic Shift Right
  25 | shr a, b | Ra := Ra >> Rb                         SHift Right
  26 | rol a, b | Ra := (Ra << Rb) & (Ra >> (16 - Rb))   ROtate Left
  27 | ror a, b | Ra := (Ra >> Rb) & (Ra << (16 - Rb))   ROtate Right
