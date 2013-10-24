@@ -4,11 +4,10 @@ Version 0.1.19
 
 ##### SUMMARY ##############################################################
 
-+ 16 bit bytes|words
-+ 31 general registers
-+ Zero register            (r0)
-+ Program Counter register (PC)
-+ Status register          (ST)
++ 16 bit words
++ 32 general registers
++ 8  control registers
++ 0x10000 words of memory (131072 octets)
 
 ##### REGISTERS ############################################################
 
@@ -28,6 +27,9 @@ Conventional register purposes:
 
  c0        program counter       pc      callee
  c1        program status        st      callee
+ c2-c3     -- reserved --        --      n/a
+ c4        interrupt vector      iv      callee
+ c5-c7     -- reserved --        --      n/a
 
 ##### OPCODES ##############################################################
 
@@ -36,8 +38,8 @@ Conventional register purposes:
     |          |                                      |
  0 - Moving things:
  01 | mov a, b | Ra := Rb                               MOVe register
- 02 | mtc a, b | Ca := Rb                               Move To Control
- 03 | mfc a, b | Ra := Cb                               Move From Control
+ 02 | mtc k, b | Ck := Rb                               Move To Control
+ 03 | mfc a, k | Ra := Ck                               Move From Control
     |          |
  04 | str a, b | [Ra] := Rb                             SToRe
  05 | psh a, b | Ra := Ra - 1, [Ra] := Rb               PuSH
@@ -84,23 +86,14 @@ Conventional register purposes:
  39 | jca c    | C       ? (jpn c)                      Jump if CArry
  3a | jnc c    | !C      ? (jpn c)                      Jump if Not Carry
     |          |
- 3b | int c    | trigger interrupt with message c       INTerrupt
+ 3b | swi c    | trigger software interrupt c           SoftWare Interrupt
+ 3e | hwi c    | trigger hardware interrupt c           HardWare Interrupt
+ 3c | sim s, c | set interrupt mode with vector at c    Set Interrupt Mode
     |          |
  3E - Weird thing:
  3e | set a, b, n1, n2 | Ra := n1, Rb := n2             SET
  3e | jsc b, n         | PC := n, Rb := PC              Jump Saving Counter
  3e | spc n            | PC := n                        Set PC
-
-##### STATUS ###############################################################
-
-Status register contains status flags: [NZ............OC]
-
-Following flags are set when a global register is loaded with new value:
-
-+ N - set to bit 15 of a register (sign bit)
-+ Z - set if register is zero
-+ O - set on overflow or underflow
-+ C - set as carry
 
 ##### INSTRUCTIONS #########################################################
 
@@ -113,11 +106,20 @@ In opcode descriptions:
 + 'a' and 'b' hold 5-bit register indices (in range [0,31]);
 + 'a' corresponds to bits [9:5] of instruction;
 + 'b' corresponds to bits [15:10] of instruction;
-  increment PC by 2.
+
++ 'k' in MTC and MFC instructions is a 5 bit field consisting of register
+  index in bits [2:0] and access mode in bits [4:3], being can be one of:
+  * 00 - SET
+  * 01 - AND
+  * 10 - IOR
+  * 11 - XOR
 
 + 'c' holds 10-bit value, signed for conditional jumps, unsigned for
   interrupt instruction;
 + 'c' corresponds to bits [15:5] of instruction;
+
++ SIM sets I flag to the sign bit of an operand, setting IV register to
+  (c & 0x1ff) << 7
 
 + 'n1' and 'n2' in SET instruction are 16-bit words at [PC+1] and [PC+2];
 + JSP instruction is a special case of SET with a = 0;
@@ -131,6 +133,19 @@ For instruction '<3e> a, b':
 + if b is r0, set Ra to a next word, then increment PC by 2;
 + if a is r0, set Rb to PC, then set PC to a next word, then
   increment PC by 2.
+
+##### STATUS ###############################################################
+
+Status register contains status flags: [NZ.HI.........OC]
+
+Following flags are set when a global register is loaded with new value:
+
++ N - set to bit 15 of a register (sign bit)
++ Z - set if register is zero
++ H - set on external hardware interrupt
++ I - set if interrupts from hardware are accepted
++ O - set on overflow or underflow
++ C - carry bit
 
 ############################################################################
 
