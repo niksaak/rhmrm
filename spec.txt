@@ -87,8 +87,8 @@ Conventional register purposes:
  3a | jnc c    | !C      ? (jpn c)                      Jump if Not Carry
     |          |
  3b | swi c    | trigger software interrupt c           SoftWare Interrupt
- 3e | hwi c    | trigger hardware interrupt c           HardWare Interrupt
- 3c | sim s, c | set interrupt mode with vector at c    Set Interrupt Mode
+ 3c | hwi c    | trigger hardware interrupt c           HardWare Interrupt
+ 3d | sim s, c | set interrupt mode with vector at c    Set Interrupt Mode
     |          |
  3E - Weird thing:
  3e | set a, b, n1, n2 | Ra := n1, Rb := n2             SET
@@ -128,7 +128,7 @@ In opcode descriptions:
 ##### <3E> OPCODE LOGIC ####################################################
 
 For instruction '<3e> a, b':
-+ if neither a or b is r0, set Ra to a next word, set Rb to a word after
++ if neither a nor b is r0, set Ra to a next word, set Rb to a word after
   next and increment PC by 3;
 + if b is r0, set Ra to a next word, then increment PC by 2;
 + if a is r0, set Rb to PC, then set PC to a next word, then
