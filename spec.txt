@@ -44,7 +44,7 @@ Conventional register purposes:
  04 | str a, b | [Ra] := Rb                             SToRe
  05 | psh a, b | Ra := Ra - 1, [Ra] := Rb               PuSH
  06 | loa a, b | Ra := [Rb]                             LOAd
- 07 | pop a, b | Ra := [Rb], Ra := Ra + 1               POP
+ 07 | pop a, b | Ra := [Rb], Rb := Rb + 1               POP
     |          |
  1 - Arithmetic things:
  10 | add a, b | Ra := Ra + Rb                          ADD
