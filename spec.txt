@@ -1,6 +1,7 @@
 
 RHMRM - RISCy Handmaid Multistack Register Machine Specification
-Version 0.1.19
+Version 0.1.20
+
 
 ##### SUMMARY ##############################################################
 
@@ -8,6 +9,7 @@ Version 0.1.19
 + 32 general registers
 + 8  control registers
 + 0x10000 words of memory (131072 octets)
+
 
 ##### REGISTERS ############################################################
 
@@ -26,10 +28,24 @@ Conventional register purposes:
  r31       stack pointer         sp      callee
 
  c0        program counter       pc      callee
- c1        program status        st      callee
+ c1        extra                 ex      callee
  c2-c3     -- reserved --        --      n/a
  c4        interrupt vector      iv      callee
  c5-c7     -- reserved --        --      n/a
+
+# C0 - PC
+Points to the next instruction.
+
+# C1 - EX
+Set by most arithmeic and logical instructions, in most cases contains
+higher 16 bits of the result.
+
+# C4 - IV [IH-- ---n nnnn nnnn]
+Contains a pointer to interrupt table, shifted right by 7 (n),
+and the following interrupt flags:
++ I - if set, external interrupts are ignored.
++ H - if set, external interrupt happened.
+
 
 ##### OPCODES ##############################################################
 
@@ -48,84 +64,89 @@ Conventional register purposes:
     |          |
  1 - Arithmetic things:
  10 | add a, b | Ra := Ra + Rb                          ADD
- 11 | adc a, b | Ra := Ra + Rb + C                      ADd with Carry
+ 11 | adx a, b | Ra := Ra + Rb + EX                     ADd with EX
  12 | sub a, b | Ra := Ra - Rb                          SUBtract
- 13 | sbc a, b | Ra := Ra - Rb + C - 1                  SUbtract with Carry
+ 13 | sbx a, b | Ra := Ra - Rb + EX                     SUbtract with EX
  14 | mul a, b | Ra := Ra * Rb                          MULtiply
  15 | mli a, b | Ra := Ra * Rb                          MuLtiply sIgned
  16 | div a, b | Ra := Ra / Rb                          DIVide
  17 | dvi a, b | Ra := Ra / Rb                          DiVide sIgned
  18 | mod a, b | Ra := Ra % Rb                          MODulo
  19 | mdi a, b | Ra := Ra % Rb                          MoDulo sIgned
+ 1a | idc a, b | Ra := Ra + b                           Increment/DeCrement
     |          |
  2 - Logicing things:
  20 | and a, b | Ra := Ra & Rb                          logical AND
  21 | ior a, b | Ra := Ra | Rb                          Inclusive OR
  22 | xor a, b | Ra := Ra ^ Rb                          eXclusive OR
- 23 | shl a, b | Ra := Ra << Rb                         SHift Left
- 24 | asr a, b | Ra := Ra >> Rb                         Arithmetic Shift Right
- 25 | shr a, b | Ra := Ra >> Rb                         SHift Right
- 26 | rol a, b | Ra := (Ra << Rb) & (Ra >> (16 - Rb))   ROtate Left
- 27 | ror a, b | Ra := (Ra >> Rb) & (Ra << (16 - Rb))   ROtate Right
+ 23 | shl a, b | Ra := Ra << b                          SHift Left
+ 24 | asr a, b | Ra := Ra >> b                          Arithmetic Shift Right
+ 25 | shr a, b | Ra := Ra >> b                          SHift Right
+ 26 | rol a, b | Ra := (Ra << b) & (Ra >> (16 - b))     ROtate Left
+ 27 | ror a, b | Ra := (Ra >> b) & (Ra << (16 - b))     ROtate Right
     |          |
- 28 | tst a, b | ST := (and a, b)                       TeST bits
- 29 | teq a, b | ST := (xor a, b)                       Test bitwise EQuality
- 2a | cmp a, b | ST := (sub a, b)                       CoMPare
- 2b | cmn a, b | ST := (add a, b)                       ComPare Negative
+ 28 | tst a, b | EX := (and a, b)                       TeST bits
+ 29 | teq a, b | EX := (xor a, b)                       Test bitwise EQuality
+ 2a | cmp a, b | EX := (sub a, b)                       CoMPare
+ 2b | cmn a, b | EX := (add a, b)                       ComPare Negative
     |          |
  3 - Jumping things:
  30 | jmp c    | PC := PC + c                           Jump Near
- 31 | jle c    | N       ? (jpn c)                      Jump if LEsser
- 32 | jng c    | N | Z   ? (jpn c)                      Jump if Not Greater
- 33 | jgr c    | !N & !Z ? (jpn c)                      Jump if GReater
- 34 | jnl c    | !N      ? (jpn c)                      Jump if Not Lesser
- 35 | jeq c    | Z       ? (jpn c)                      Jump if EQual
- 36 | jne c    | !Z      ? (jpn c)                      Jump if Not Equal
- 37 | jov c    | O       ? (jpn c)                      Jump if OVerflow
- 38 | jno c    | !O      ? (jpn c)                      Jump if Not Overflow
- 39 | jca c    | C       ? (jpn c)                      Jump if CArry
- 3a | jnc c    | !C      ? (jpn c)                      Jump if Not Carry
+ 31 | jle c    | EX < 0  ? (jpn c)                      Jump if LEsser
+ 32 | jng c    | EX <= 0 ? (jpn c)                      Jump if Not Greater
+ 33 | jgr c    | EX > 0  ? (jpn c)                      Jump if GReater
+ 34 | jnl c    | EX >= 0 ? (jpn c)                      Jump if Not Lesser
+ 35 | jeq c    | EX == 0 ? (jpn c)                      Jump if EQual
+ 36 | jne c    | EX != 0 ? (jpn c)                      Jump if Not Equal
     |          |
  3b | swi c    | trigger software interrupt c           SoftWare Interrupt
  3c | hwi c    | trigger hardware interrupt c           HardWare Interrupt
- 3d | sim s, c | set interrupt mode with vector at c    Set Interrupt Mode
+ 3d | sim c    | set interrupt mode with vector at c    Set Interrupt Mode
     |          |
  3E - Weird thing:
- 3e | set a, b, n1, n2 | Ra := n1, Rb := n2             SET
- 3e | jsc b, n         | PC := n, Rb := PC              Jump Saving Counter
+ 3e | set a, b, n, m   | Ra := n, Rb := m, PC := PC + 2 SET
+ 3e | jsc b, n         | Rb := PC + 1, PC := n          Jump Saving Counter
  3e | spc n            | PC := n                        Set PC
+
 
 ##### INSTRUCTIONS #########################################################
 
 Each instruction (except SET) is 16 bit word.
 
+For arithmetic operators:
+ADD, ADX, SUB, SBX, MUL, MLI and SHL set EX to higher 16 bits of the result.
+DIV, DVI, ASR and SHR set EX to lower 16 bits of the result.
+
+DIV and DVI set Ra to 0xffff and -1 respectively when divisor equals zero.
+MOD and MDI set Ra to Rb when divisor equals zero.
+
+
 In opcode descriptions:
 
 + Opcode mnemonic corresponds to bits [6:0] of instruction;
 
-+ 'a' and 'b' hold 5-bit register indices (in range [0,31]);
-+ 'a' corresponds to bits [9:5] of instruction;
-+ 'b' corresponds to bits [15:10] of instruction;
++ a and b hold 5-bit register indices (in range [0,31]);
++ a corresponds to bits [9:5] of instruction;
++ a corresponds to bits [15:10] of instruction;
 
-+ 'k' in MTC and MFC instructions is a 5 bit field consisting of register
-  index in bits [2:0] and access mode in bits [4:3], being can be one of:
++ k in MTC and MFC instructions is a 5 bit field consisting of register
+  index in bits [2:0] and access mode in bits [4:3], which can one of:
   * 00 - SET
   * 01 - AND
   * 10 - IOR
   * 11 - XOR
 
-+ 'c' holds 10-bit value, signed for conditional jumps, unsigned for
++ c holds 10-bit value, signed for conditional jumps, unsigned for
   interrupt instruction;
-+ 'c' corresponds to bits [15:5] of instruction;
++ c corresponds to bits [15:5] of instruction;
 
 + SIM sets I flag to the sign bit of an operand, setting IV register to
   (c & 0x1ff) << 7
 
-+ 'n1' and 'n2' in SET instruction are 16-bit words at [PC+1] and [PC+2];
++ n1 and n2 in SET instruction are 16-bit words at [PC+1] and [PC+2];
 + JSP instruction is a special case of SET with a = 0;
 + SPC instruction is a special case of SET with a and b equal 0.
 
-##### <3E> OPCODE LOGIC ####################################################
 
 For instruction '<3e> a, b':
 + if neither a nor b is r0, set Ra to a next word, set Rb to a word after
@@ -134,18 +155,6 @@ For instruction '<3e> a, b':
 + if a is r0, set Rb to PC, then set PC to a next word, then
   increment PC by 2.
 
-##### STATUS ###############################################################
-
-Status register contains status flags: [NZ.HI.........OC]
-
-Following flags are set when a global register is loaded with new value:
-
-+ N - set to bit 15 of a register (sign bit)
-+ Z - set if register is zero
-+ H - set on external hardware interrupt
-+ I - set if interrupts from hardware are accepted
-+ O - set on overflow or underflow
-+ C - carry bit
 
 ############################################################################
 
@@ -153,18 +162,17 @@ Following flags are set when a global register is loaded with new value:
 
 :start  set a0, 9
         jsc fib, ra         ;; fib(9)
-        spc t0, deadloop
+        spc crash
 
-:deadloop                   ; loop forever
-        jpn deadloop
+:fib    set v0, t0, 0, 1    ;; curr := 0, next := 1
+        set t7, 1
+:.loop  sub a0, t7
+        jng .ret
+        mov t1, t0          ;; temp := curr + next
+        add t1, v0
+        mov v0, t0          ;; curr := next
+        mov t0, t1          ;; nect := temp
+        jmp .loop
+:.ret   spc ra              ;; return
 
-:fib    set t1, v0, -1, 1   ;; prev := -1, curr := 1
-        cmp a0, 0
-:.loop  jle .end            ;; if less { goto end }
-        mov t0, t1          ;; t += np
-        add t0, v0          ;; t += nc
-        mov t1, v0          ;; np = nc
-        mov v0, t2          ;; nc = t
-        sub a0, 1           ;; n--; less := n < 0
-        jpn .loop
-:.end   jmp ra              ;; return nn
+:crash  jmp -1
