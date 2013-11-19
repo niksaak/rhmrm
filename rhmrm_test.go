@@ -2,9 +2,28 @@ package rhmrm
 
 import "testing"
 
+// convenient abbreviations
+var i1, i2 = WMkInstruction1, WMkInstruction2
+
+// mk_machine creates machine with superwisor mode bit set.
+func mk_machine() *Machine {
+	m := new(Machine)
+	(*FlagsRegister)(m.C(C_FL)).SetS(true)
+	return m
+}
+
+// exec_until_interrupt calls m.Step until the first interrupt,
+// but no more than step_max times.
+func exec_until_interrupt(m *Machine, step_max int) (msg Word, t bool) {
+	for i := 0; !t && i < step_max; i++ {
+		msg, t = m.Step()
+	}
+	return msg, t
+}
+
 func TestSimpleAddition(t *testing.T) {
 	t.Parallel()
-	m := new(Machine)
+	m := mk_machine()
 	*m.R(1), *m.R(2) = 1, 2
 	text := []Word{
 		WMkInstruction2(OP_ADD, R_1, R_2),
@@ -26,7 +45,7 @@ func TestSimpleAddition(t *testing.T) {
 
 func TestImmediateLoadingAddition(t *testing.T) {
 	t.Parallel()
-	m := new(Machine)
+	m := mk_machine()
 	text := []Word{
 		WMkInstruction2(OP_IMP, IMP_MOV, R_1),
 		2,
@@ -51,7 +70,6 @@ func TestImmediateLoadingAddition(t *testing.T) {
 
 /* Fibonacci function:
 :fib    mov v0, zr
-        mov t0, zr
     imp mov v1, 1
         cmp a0, zr
         jeq _ret
@@ -67,28 +85,27 @@ func TestImmediateLoadingAddition(t *testing.T) {
 
 func TestFibFunction(t *testing.T) {
 	t.Parallel()
-	m := new(Machine)
+	m := mk_machine()
 	i1, i2 := WMkInstruction1, WMkInstruction2
 	text := []Word{ // handmaid assembly ftw
-		0x00: i2(OP_IMP, IMP_MOV, R_A0),
-		0x01: 9,
-		0x02: i2(OP_IMP, IMP_SRL, R_RA),
-		0x03: 5,
-		0x04: i1(OP_HWI, 9),
-		0x05: i2(OP_MOV, R_V0, R_ZR),
-		0x06: i2(OP_MOV, R_T0, R_ZR),
-		0x07: i2(OP_IMP, IMP_MOV, R_V1),
-		0x08: 1,
-		0x09: i2(OP_CMP, R_A0, R_ZR),
-		0x0a: i1(OP_JEQ, 8),
-		0x0b: i2(OP_MOV, R_T0, R_V0),
-		0x0c: i2(OP_ADD, R_T0, R_V1),
-		0x0d: i2(OP_MOV, R_V0, R_V1),
-		0x0e: i2(OP_MOV, R_V1, R_T0),
-		0x0f: i2(OP_INC, R_A0, -1),
-		0x10: i2(OP_CMP, R_A0, R_ZR),
-		0x11: i1(OP_JGT, -7),
-		0x12: i2(OP_SRL, R_ZR, R_RA),
+		i2(OP_IMP, IMP_MOV, R_A0),
+		9,
+		i2(OP_IMP, IMP_SRL, R_RA),
+		5,
+		i1(OP_HWI, 9),
+		i2(OP_MOV, R_V0, R_ZR), // :fib
+		i2(OP_IMP, IMP_MOV, R_V1),
+		1,
+		i2(OP_CMP, R_A0, R_ZR),
+		i1(OP_JEQ, 8),
+		i2(OP_MOV, R_T0, R_V0), // :_loop
+		i2(OP_ADD, R_T0, R_V1),
+		i2(OP_MOV, R_V0, R_V1),
+		i2(OP_MOV, R_V1, R_T0),
+		i2(OP_INC, R_A0, -1),
+		i2(OP_CMP, R_A0, R_ZR),
+		i1(OP_JGT, -7),
+		i2(OP_SRL, R_ZR, R_RA), // :_ret
 	}
 	m.Load(text)
 	for i, j := false, 0; !i && j < 80; j++ {
