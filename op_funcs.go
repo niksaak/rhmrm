@@ -341,7 +341,7 @@ var imp_funcs = []OpFunc{
 	IMP_SRL: func(m *Machine, args ...Word) {
 		a, n := get2rn(args, m)
 		*a = *m.PC()
-		*m.PC() = n
+		*m.PC() = n - 1 // compensate OP_IMP incrementing PC by one
 	},
 
 	IMP_ADD: func(m *Machine, args ...Word) {
