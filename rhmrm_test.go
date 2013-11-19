@@ -119,3 +119,33 @@ func TestFibFunction(t *testing.T) {
 		t.Errorf("fib(9) returns %v (%d), want %d", ret, ret, 34)
 	}
 }
+
+func TestOP_SRL(t *testing.T) {
+	t.Parallel()
+	m := mk_machine()
+	text := []Word{
+		i2(OP_SRL, R_0, R_1),
+		9: i1(OP_HWI, 9),
+	}
+	m.Load(text)
+	*m.R(R_1) = 9
+	msg, _ := exec_until_interrupt(m, 2)
+	if msg != 9 {
+		t.Errorf("msg=%v, want %v", msg, Word(9))
+	}
+}
+
+func TestIMP_SRL(t *testing.T) {
+	t.Parallel()
+	m := mk_machine()
+	text := []Word{
+		i2(OP_IMP, IMP_SRL, R_0),
+		9,
+		9: i1(OP_HWI, 9),
+	}
+	m.Load(text)
+	msg, _ := exec_until_interrupt(m, 3)
+	if msg != 9 {
+		t.Errorf("msg=%v, want %v", msg, Word(9))
+	}
+}
