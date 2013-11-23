@@ -255,8 +255,9 @@ func (l *Lexer) Pos() (p Position) {
 	return
 }
 
-// Scan reads the next lexeme or Unicode character from source and returns it.
-// It returns EOF at the end of the source.
+// Scan reads the next lexeme or Unicode character from source and returns it
+// and a lexeme string.
+// It returns EOF and empty string at the end of the source.
 func (l *Lexer) Scan() (rune, string) {
 	ch := l.Peek()
 
