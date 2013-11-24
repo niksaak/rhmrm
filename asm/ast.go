@@ -45,7 +45,7 @@ type AST struct {
 	nodes []Node
 }
 
-func (a AST) Kind() int { return AST }
+func (a AST) Kind() int { return ASTKind }
 
 func (a AST) Pos() Position { return Position{ a.file, 0, 1, 1 } }
 
@@ -144,7 +144,7 @@ func (b BlockNode) Kind() int { return BlockKind }
 
 func (b BlockNode) Pos() Position { return b.pos }
 
-func (b BlockNode) String() string {
+func (b BlockNode) String() (s string) {
 	s = fmt.Sprintf("%*s:(\n", indent(), "block")
 	indent_level++
 	for _, n := range b.nodes {
