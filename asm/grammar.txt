@@ -1,0 +1,45 @@
+Grammar for RHMRM assembly.
+Version 0.2.0.
+
+clause = [ deflabel ] ( instruction | directive ) [ comment ] "\n" .
+
+deflabel = ":" label .
+
+label = local-label | global-label .
+
+local-label = "_" identifier .
+
+global-label = identifier .
+
+identifier = letter { letter | digit } .
+
+letter = <a unicode letter> | "_" .
+
+digit = <a unicode decimal digit> .
+
+instruction = mnemonic operand [ "," operand ] .
+
+mnemonic = ("mov" ... "ire") | "imp" ("brk" ... "cmn") .
+
+operand = register | identifier | number .
+
+register = ( "r0" ... "r31" ) | "ra" | ( "s0" ... "s7" ) | ( "t0 ... "t7" ) |
+           ( "v0" ... "v3" ) | ( "a0" ... "a7" ) | "fp" | "sp" |
+           ( "c0" ... "c4" ) | "pc" | "ex" | "ia" | "im" | "ir" | "fl" .
+
+number = decimal-number | binary-number | octal-number | hexadecimal-number .
+
+decimal-number = digit { digit } .
+
+binary-number = ( "0b" { "0" | "1" } ) | ( { "0" | "1" } "b" ) .
+
+octal-number = ( "0o" { "0" ... "7" } ) | ( { "0" ... "7" } "o" ) .
+
+hexadecimal-number = ( "0x" { digit | ( "a" ... "f" ) } ) |
+                     ( { digit | ( "a" ... "f" ) } ( "h" | "x" ) )
+
+directive = "." (single-line-directive | multi-line-directive) .
+
+single-line-directive = identifier [ { operand "," } operand ] .
+
+multi-line-directive = single-line-directive "{" [comment] "\n" { clause } "}" .
