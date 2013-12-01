@@ -1,161 +1,96 @@
 package asm
 
-import (
-	"bytes"
-	"fmt"
-	"io"
-	"testing"
-)
+import "testing"
+import "fmt"
 
-type Streader struct {
-	data []string
-	step int
+// ck_lexeme contains string and expected kind and literal.
+type ck_lexeme struct {
+	kind rune
+	str string
+	lit string
 }
 
-func (r *Streader) Read(p []byte) (n int, err error) {
-	if r.step < len(r.data) {
-		s := r.data[r.step]
-		n = copy(p, s)
-		r.step++
-	} else {
-		err = io.EOF
+var checks = []ck_lexeme{
+	{ COMMENT, "; Comments", " Comments" },
+	{ COMMENT, "; Check \n newline", " Check " },
+
+	{ COMMENT, "; Symbols", "" },
+	{ SYMBOL, "foo", "" },
+	{ SYMBOL, "b4r", "" },
+	{ SYMBOL, "_ba2", "" },
+	{ SYMBOL, "Ghilber t", "Ghilber" },
+
+	{ COMMENT, "; Registers", "" },
+	{ REGISTER, "r0", "" },
+	{ REGISTER, "r31", "" },
+	{ REGISTER, "zr", "" },
+	{ REGISTER, "pc", "" },
+
+	{ COMMENT, "; Strings", "" },
+	{ STRING, `"Lorem ipsum dolor"`, "Lorem ipsum dolor" },
+	{ STRING, "\"Sit amet \n consectetur\"", "Sit amet \n consectetur" },
+
+	{ COMMENT, "; Integers", "" },
+	{ INTEGER, "0x10c", "" },
+	{ INTEGER, "800h", "" },
+	{ INTEGER, "9001this_is_invalid_for_parser_but_valid_for_lexer", "" },
+
+	{ COMMENT, "; Runes", "" },
+	{ RUNE, "'z'", "z" },
+	{ RUNE, "'ї'", "ї" },
+	{ RUNE, `'\x40'`, `\x40` },
+	{ RUNE, `'\u0407'`, `\u0407` },
+
+	{ '.', ".", "." },
+	{ '{', "{" , ""},
+	{ '}', "}", "}" },
+	{ '\n', "\n", "" },
+}
+
+func TestLexemeString(t *testing.T) {
+	t.Parallel()
+	ch := rune(EOF)
+	if s := LexemeString(ch); s != "EOF" {
+		t.Errorf(`LexemeString(EOF) is %q, want "EOF"`, s)
 	}
-	return
-}
-
-type lexeme struct {
-	lm rune
-	text string
-}
-
-var f100 = "fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff" +
-	"fffffffffffffffffffffffffffffffffff"
-
-var lexeme_list = []lexeme{
-	{ Comment, "; line comments" },
-	{ Comment, ";" },
-	{ Comment, ";;" },
-	{ Comment, ";comment" },
-	{ Comment, "; comment;" },
-	{ Comment, ";" + f100 },
-
-	{ Comment, "; symbols" },
-	{ Symbol, "a" },
-	{ Symbol, "a0" },
-	{ Symbol, "foobar" },
-	{ Symbol, "abc123" },
-	{ Symbol, "LGTM" },
-	{ Symbol, "_" },
-	{ Symbol, "_abc123" },
-	{ Symbol, "_abc_123_" },
-	{ Symbol, "_本" },
-	{ Symbol, "本" },
-	{ Symbol, "bar９８７６"},
-	{ Symbol, f100 },
-
-	{ Comment, "; integers" },
-	{ Integer, "0" },
-	{ Integer, "01" },
-	{ Integer, "0x10c" },
-	{ Integer, "0x" + f100 },
-	{ Integer, "235h" },
-	{ Integer, "0X" + f100 },
-
-	{ Comment, "; runes" },
-	{ Rune, `' '` },
-	{ Rune, `'a'` },
-	{ Rune, `'本'` },
-	{ Rune, `'\a'` },
-	{ Rune, `'\b'` },
-	{ Rune, `'\f'` },
-	{ Rune, `'\n'` },
-	{ Rune, `'\r'` },
-	{ Rune, `'\t'` },
-	{ Rune, `'\v'` },
-	{ Rune, `'\''` },
-	{ Rune, `'\000'` },
-	{ Rune, `'\777'` },
-	{ Rune, `'\x00'` },
-	{ Rune, `'\xff'` },
-	{ Rune, `'\u0000'` },
-	{ Rune, `'\ufA16'` },
-	{ Rune, `'\U00000000'` },
-	{ Rune, `'\U0000ffAB'` },
-
-	{ Comment, "; strings" },
-	{ String, `" "` },
-	{ String, `"a"` },
-	{ String, `"本"` },
-	{ String, `"\a"` },
-	{ String, `"\b"` },
-	{ String, `"\f"` },
-	{ String, `"\n"` },
-	{ String, `"\r"` },
-	{ String, `"\t"` },
-	{ String, `"\v"` },
-	{ String, `"\""` },
-	{ String, `"\000"` },
-	{ String, `"\777"` },
-	{ String, `"\x00"` },
-	{ String, `"\xff"` },
-	{ String, `"\u0000"` },
-	{ String, `"\ufA16"` },
-	{ String, `"\U00000000"` },
-	{ String, `"\U0000ffAB"` },
-	{ String, `"` + f100 + `"` },
-
-	{Comment, "; individual characters"},
-	// NUL character is not allowed
-	{ '\x01', "\x01" },
-	{ ' ' - 1, string(' ' - 1) },
-	{ '+', "+" },
-	{ '/', "/" },
-	{ '.', "." },
-	{ '~', "~" },
-	{ '(', "(" },
-}
-
-func mk_source(pattern string) *bytes.Buffer {
-	var buf bytes.Buffer
-	for _, lm := range lexeme_list {
-		fmt.Fprintf(&buf, pattern, lm.text)
+	ch = '{'
+	if s := LexemeString(ch); s != "{" {
+		t.Errorf(`LexemeString({) is %q, want "{"`, s)
 	}
-	return &buf
 }
 
-func check_lexeme(t *testing.T, l *Lexer,
-	line int, got, want rune, text string) {
-	if got != want {
-		t.Fatalf("tok=%s, want %s for %q",
-			LexemeString(got), LexemeString(want), text)
+func TestRegisterp(t *testing.T) {
+	t.Parallel()
+	r := "r13"
+	if !registerp(r) {
+		t.Errorf("registerp(%v) is false, want true", r)
 	}
-	if l.Line != line {
-		t.Errorf("line=%d, want %d for %q", l.Line, line, text)
-	}
-	ltext := l.lexeme_text()
-	if ltext != text {
-		t.Errorf("text = %q, want %q", ltext, text)
-	} // no need to check for idempotency because lexeme_text() is local
 }
 
-func count_new_lines(s string) (n int) {
-	for _, ch := range s {
-		if ch == '\n' {
-			n++
+func TestLexer(t *testing.T) {
+	t.Parallel()
+	lx := Lexer{}
+	for i := 0; i < len(checks); i++ {
+		ck := checks[i]
+		filename := fmt.Sprintf("test#%d", i)
+		lx.Init([]byte(ck.str), filename, mkteh(t))
+		_, lm, lit := lx.Scan()
+
+		if lm != ck.kind {
+			t.Errorf("bad kind for %q: got %s, want %s",
+				ck.str,
+				LexemeString(lm), LexemeString(ck.kind))
+		}
+		if ck.lit != "" && lit != ck.lit {
+			t.Errorf("bad literal for %q: got %q, want %q",
+				ck.str, lit, ck.lit)
 		}
 	}
-	return
 }
 
-func TestScan(t *testing.T) {
-	t.Parallel()
-	l := new(Lexer).Init(mk_source(" \t%s\n"))
-	lm, _ := l.Scan()
-	line := 1
-	for _, k := range lexeme_list {
-		check_lexeme(t, l, line, lm, k.lm, k.text)
-		lm, _ = l.Scan()
-		line += count_new_lines(k.text) + 1
+// make testing error handler
+func mkteh(t *testing.T) ErrorHandler {
+	return func(pos Position, msg string) {
+		t.Logf("lexer: %v: %s", &pos, msg)
 	}
-	check_lexeme(t, l, line, lm, EOF, "")
 }
