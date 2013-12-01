@@ -2,239 +2,150 @@ package asm
 
 import "fmt"
 
-var indent_level int
-var indent_size int = 2
-
-func indent() int {
-	return indent_level * indent_size
-}
-
-// Node kinds.
-const (
-	ASTKind = iota
-
-	// Toplevel kinds
-	LabelKind
-	InstructionKind
-	DirectiveKind
-	CommentKind
-
-	// Subtree block
-	BlockKind
-
-	// Operators
-	InstructionOpKind
-	DirectiveOpKind
-
-	// Operands
-	StringKind
-	SymbolKind
-	RegisterKind
-	IntegerKind
-)
-
-// Node of a syntax tree.
 type Node interface {
-	Kind() int
 	Pos() Position
 	fmt.Stringer
 }
 
-type AST struct {
-	file string
-	nodes []Node
+// Register kinds.
+const (
+	generalRegisterKind = iota
+	controlRegisterKind
+)
+
+type (
+	// ProgramNode represents the whole program.
+	ProgramNode struct {
+		Position
+		clauses []Node
+	}
+
+	// Toplevel node types //
+
+	// LabelNode represents label definition.
+	LabelNode struct {
+		SymbolNode
+		name string
+	}
+
+	// DirectiveNode represents assembler directive.
+	DirectiveNode struct {
+		Position
+		op SymbolNode
+		operands []Node
+	}
+
+	// InstructionNode represents instruction.
+	InstructionNode struct {
+		DirectiveNode
+	}
+
+	// CommentNode represents a comment.
+	CommentNode struct {
+		Position
+		level int
+		comment string
+	}
+
+	// Operand node types //
+
+	// RegisterNode represents a RHMRM register.
+	RegisterNode struct {
+		Position
+		kind int
+		register int
+	}
+
+	// SymbolNode represents a symbol.
+	SymbolNode struct {
+		Position
+		name string
+	}
+
+	// IntegerNode represents an integer.
+	IntegerNode struct {
+		Position
+		value int
+	}
+
+	// StringNode represents a string.
+	StringNode struct {
+		Position
+		text string
+	}
+
+	// BlockNode represents a block of clauses.
+	BlockNode struct {
+		ProgramNode
+	}
+)
+
+func (n ProgramNode) Pos() Position { return n.Position }
+func (n LabelNode) Pos() Position { return n.Position }
+func (n DirectiveNode) Pos() Position { return n.Position }
+func (n InstructionNode) Pos() Position { return n.Position }
+func (n CommentNode) Pos() Position { return n.Position }
+func (n RegisterNode) Pos() Position { return n.Position }
+func (n SymbolNode) Pos() Position { return n.Position }
+func (n IntegerNode) Pos() Position { return n.Position }
+func (n StringNode) Pos() Position { return n.Position }
+func (n BlockNode) Pos() Position { return n.Position }
+
+func (n *ProgramNode) String() string {
+	return fmt.Sprintf("program:( <%d clauses> )", len(n.clauses))
 }
 
-func (a AST) Kind() int { return ASTKind }
+func (n *LabelNode) String() string {
+	return fmt.Sprintf("label:%v", n.name)
+}
 
-func (a AST) Pos() Position { return Position{ a.file, 0, 1, 1 } }
-
-func (a AST) String() (s string) {
-	s = fmt.Sprintf("%*s:(\n", indent(), a.file)
-	indent_level++
-	for _, n := range a.nodes {
-		s += fmt.Sprintf("%*s\n", indent(), n)
+// helper for DirectiveNode and InstructionNode
+func cmdString(kind string, op Node, operands []Node) (s string) {
+	s = fmt.Sprintf("%s:(%v", kind, op)
+	for _, o := range operands {
+		s += " " + o.String()
 	}
-	indent_level--
-	s += ")\n"
+	s += ")"
 	return
 }
 
-// LabelNode represents label definition in syntax tree.
-type LabelNode struct {
-	pos Position
-	name string
+func (n *DirectiveNode) String() string {
+	return cmdString("directive", &n.op, n.operands)
 }
 
-func (l LabelNode) Kind() int { return LabelKind }
-
-func (l LabelNode) Pos() Position { return l.pos }
-
-func (l LabelNode) String() string {
-	return fmt.Sprintf("%*s", indent(), l.name)
+func (n *InstructionNode) String() string {
+	return cmdString("instruction", &n.op, n.operands)
 }
 
-// InstructionNode represents instruction statement.
-type InstructionNode struct {
-	pos Position
-	data []Node
+func (n *CommentNode) String() string {
+	return fmt.Sprintf("comment:(%d %q)", n.level, n.comment)
 }
 
-func (i InstructionNode) Kind() int { return InstructionKind }
-
-func (i InstructionNode) Pos() Position { return i.pos }
-
-func (i InstructionNode) String() (s string) {
-	s = fmt.Sprintf("%*s", indent(), "instruction:(")
-	for n := range i.data {
-		s += i.data[n].String()
-		if n < len(i.data) - 1 {
-			s += " "
-		} else {
-			s += ")"
-		}
+func (n *RegisterNode) String() string {
+	var kind string
+	switch n.kind {
+	case generalRegisterKind:
+		kind = "r"
+	case controlRegisterKind:
+		kind = "c"
+	default:
+		kind = "X"
 	}
-	return
+	return fmt.Sprintf("register:%s%d", kind, n.register)
 }
 
-// DirectiveNode represents assembler directives.
-type DirectiveNode struct {
-	pos Position
-	data []Node
+func (n *SymbolNode) String() string {
+	return "symbol:" + n.name
 }
 
-func (d DirectiveNode) Kind() int { return DirectiveKind }
-
-func (d DirectiveNode) Pos() Position { return d.pos }
-
-func (d DirectiveNode) String() (s string) {
-	s = fmt.Sprintf("%*s", indent(), "directive:(")
-	for n := range d.data {
-		s += d.data[n].String()
-		if n < len(d.data) - 1 {
-			s += " "
-		} else {
-			s += ")"
-		}
-	}
-	return
+func (n *IntegerNode) String() string {
+	return fmt.Sprintf("integer:%d", n.value)
 }
 
-// CommentNode represents source comment.
-type CommentNode struct {
-	pos Position
-	comment string
+func (n *StringNode) String() string {
+	return fmt.Sprintf("string:%q", n.text)
 }
 
-func (c CommentNode) Kind() int { return CommentKind }
-
-func (c CommentNode) Pos() Position { return c.pos }
-
-func (c CommentNode) String() string {
-	return fmt.Sprintf("%*s:%q", indent(), "comment", c.comment)
-}
-
-// BlockNode represents block.
-type BlockNode struct {
-	pos Position
-	nodes []Node
-}
-
-func (b BlockNode) Kind() int { return BlockKind }
-
-func (b BlockNode) Pos() Position { return b.pos }
-
-func (b BlockNode) String() (s string) {
-	s = fmt.Sprintf("%*s:(\n", indent(), "block")
-	indent_level++
-	for _, n := range b.nodes {
-		s += fmt.Sprintf("%*s\n", indent(), n)
-	}
-	indent_level--
-	s += ")\n"
-	return
-}
-
-// InstructionOpNode represents instruction operator.
-type InstructionOpNode struct {
-	pos Position
-	name string
-}
-
-func (o InstructionOpNode) Kind() int { return InstructionOpKind }
-
-func (o InstructionOpNode) Pos() Position { return o.pos }
-
-func (o InstructionOpNode) String() string {
-	return "op:" + o.name
-}
-
-// DirectiveOpNode represents directive operator.
-type DirectiveOpNode struct {
-	pos Position
-	name string
-}
-
-func (o DirectiveOpNode) Kind() int { return DirectiveOpKind }
-
-func (o DirectiveOpNode) Pos() Position { return o.pos }
-
-func (o DirectiveOpNode) String() string {
-	return "dop:" + o.name
-}
-
-// StringNode represents string.
-type StringNode struct {
-	pos Position
-	str string
-}
-
-func (s StringNode) Kind() int { return StringKind }
-
-func (s StringNode) Pos() Position { return s.pos }
-
-func (s StringNode) String() string {
-	return fmt.Sprintf("string:%q", s.str)
-}
-
-// SymbolNode represents a symbol.
-type SymbolNode struct {
-	pos Position
-	name string
-}
-
-func (s SymbolNode) Kind() int { return SymbolKind }
-
-func (s SymbolNode) Pos() Position { return s.pos }
-
-func (s SymbolNode) String() string {
-	return "symbol:" + s.name
-}
-
-// RegisterNode represents register name.
-type RegisterNode struct {
-	pos Position
-	name string
-}
-
-func (r RegisterNode) Kind() int { return RegisterKind }
-
-func (r RegisterNode) Pos() Position { return r.pos }
-
-func (r RegisterNode) String() string {
-	return "register:" + r.name
-}
-
-// IntegerNode represents an integer.
-type IntegerNode struct {
-	pos Position
-	num int
-}
-
-func (i IntegerNode) Kind() int { return IntegerKind }
-
-func (i IntegerNode) Pos() Position { return i.pos }
-
-func (i IntegerNode) String() string {
-	return fmt.Sprintf("int:%d", i.num)
+func (n *BlockNode) String() string {
+	return fmt.Sprintf("block:( <%d clauses> )", len(n.clauses))
 }
