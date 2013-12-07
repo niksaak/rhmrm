@@ -24,7 +24,7 @@ type (
 
 	// LabelNode represents label definition.
 	LabelNode struct {
-		SymbolNode
+		Position
 		name string
 	}
 
