@@ -182,19 +182,45 @@ func (p *Parser) parseOperand() (o Node) {
 	return nil
 }
 
-// register = <register> .
+// register = <general-register> | [ <access-mode> ] <control-register> .
 func (p *Parser) parseRegister() Node {
-	if p.k != REGISTER {
-		return nil
-	}
-	k, n, ok := reginfo(p.lit)
-	if !ok { // should never happen
-		p.errorf("bad register: %s", p.lit)
+	r := &RegisterNode{Position: p.pos}
+	switch p.k {
+	case '&', '|', '^':
+		// access modes for control register.
+		r.kind = controlRegisterKind & controlModes[p.k]
 		p.next()
-		return nil
+		if !p.lmexpect(SYMBOL) {
+			return nil
+		}
+		k, n, ok := reginfo(p.lit)
+		switch {
+		case !ok:
+			p.errorf("bad register: %s", p.lit)
+			return nil
+		case k != controlRegisterKind:
+			p.errorf("register is not control: %s", p.lit)
+			return nil
+		}
+		r.index = n
+	case '=':
+		p.next()
+		fallthrough
+	default:
+		if !p.lmexpect(SYMBOL) {
+			return nil
+		}
+		// TODO: get rid of repeating somehow.
+		k, n, ok := reginfo(p.lit)
+		if !ok {
+			p.errorf("bad register: %s", p.lit)
+			return nil
+		}
+		r.kind = k
+		r.index = n
 	}
 	p.next()
-	return &RegisterNode{p.pos, k, n}
+	return r
 }
 
 // symbol = <symbol> .
@@ -262,6 +288,7 @@ func ndappend(slice []Node, nodes ...Node) []Node {
 	return slice
 }
 
+// error calls parser error handler with supplied message.
 func (p *Parser) error(msg string) {
 	if p.err != nil {
 		p.err(p.pos, msg)
@@ -269,11 +296,12 @@ func (p *Parser) error(msg string) {
 	p.ErrorCount++
 }
 
+// errorf is like error with format.
 func (p *Parser) errorf(format string, args ...interface{}) {
 	p.error(fmt.Sprintf(format, args...))
 }
 
-// convenient helper for checking if current lexeme is not the desired.
+// lmexpect is a convenient helper for checking if current lexeme is desired.
 func (p *Parser) lmexpect(lm rune) bool {
 	if p.k != lm {
 		p.errorf("expected %s, got %s (%s)",

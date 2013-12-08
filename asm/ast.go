@@ -9,9 +9,25 @@ type Node interface {
 
 // Register kinds.
 const (
-	generalRegisterKind = iota
+	generalRegisterKind = iota << 28
 	controlRegisterKind
+	// to be expanded in future
 )
+
+// Control register acces modes.
+const (
+	controlSETMode = iota
+	controlANDMode
+	controlIORMode
+	controlXORMode
+)
+
+var controlModes = map[rune]int{
+	'=': controlSETMode,
+	'&': controlANDMode,
+	'|': controlIORMode,
+	'^': controlXORMode,
+}
 
 type (
 	// ProgramNode represents the whole program.
@@ -53,7 +69,7 @@ type (
 	RegisterNode struct {
 		Position
 		kind int
-		register int
+		index int
 	}
 
 	// SymbolNode represents a symbol.
@@ -123,15 +139,23 @@ func (n *CommentNode) String() string {
 
 func (n *RegisterNode) String() string {
 	var kind string
-	switch n.kind {
+	switch n.kind >> 28 {
 	case generalRegisterKind:
 		kind = "r"
 	case controlRegisterKind:
-		kind = "c"
+		switch n.kind &^ 0xf000 {
+		case controlANDMode:
+			kind = "&"
+		case controlIORMode:
+			kind = "|"
+		case controlXORMode:
+			kind = "^"
+		}
+		kind += "c"
 	default:
 		kind = "X"
 	}
-	return fmt.Sprintf("register:%s%d", kind, n.register)
+	return fmt.Sprintf("register:%s%d", kind, n.index)
 }
 
 func (n *SymbolNode) String() string {
