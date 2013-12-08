@@ -70,8 +70,6 @@ func (p *Position) String() (s string) {
 	return
 }
 
-var _ fmt.Stringer = new(Position)
-
 type ErrorHandler func(p Position, msg string)
 
 // Lexer for RHMRM assembly.
