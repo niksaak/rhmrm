@@ -111,42 +111,42 @@ func (p *Parser) parseLabel() Node {
 	return &LabelNode{pos, name}
 }
 
-// directive = "." instruction .
+// directive = "." symbol [ operands ] .
 func (p *Parser) parseDirective() Node {
 	if p.k != '.' { // directives start with a dot
 		return nil
 	}
 	pos := p.pos
 	p.next()
+
+	// operator
 	if !p.lmexpect(SYMBOL) {
 		return nil
 	}
-	var operands []Node
-	o := p.parseOperand()
-	for o != nil {
-		operands = append(operands, o)
-		p.next()
-	}
-	return &DirectiveNode{pos, *p.parseSymbol().(*SymbolNode), operands}
+	sym := p.lit
+	p.next()
+
+	// operands
+	operands := p.parseOperands()
+
+	return &DirectiveNode{pos, sym, operands}
 }
 
-// instruction = symbol [ operand { "," operand } ] .
+// instruction = symbol [ operands ] .
 func (p *Parser) parseInstruction() Node {
 	if p.k != SYMBOL { // instructions start with a symbol
 		return nil
 	}
 	pos := p.pos
-	sym := *p.parseSymbol().(*SymbolNode)
+
+	// operator
+	sym := p.lit
 	p.next()
 
-	var operands []Node
-	o := p.parseOperand()
-	for o != nil {
-		operands = append(operands, o)
-		p.next()
-	}
+	// operands
+	operands := p.parseOperands()
 
-	return &InstructionNode{DirectiveNode{pos, sym, operands}}
+	return &InstructionNode{pos, sym, operands}
 }
 
 // comment = <comment-line-token> .
@@ -160,6 +160,19 @@ func (p *Parser) parseComment() (c Node) {
 	}
 	c = &CommentNode{p.pos, i, p.lit[i:]}
 	p.next()
+	return
+}
+
+// operands = [ operand { [ "," ] operand } ] .
+func (p *Parser) parseOperands() (operands []Node) {
+	o := p.parseOperand()
+	for o != nil {
+		if p.k == ',' { // skip commas
+			p.next()
+		}
+		operands = append(operands, o)
+		o = p.parseOperand()
+	}
 	return
 }
 

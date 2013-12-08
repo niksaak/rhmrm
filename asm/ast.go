@@ -47,13 +47,15 @@ type (
 	// DirectiveNode represents assembler directive.
 	DirectiveNode struct {
 		Position
-		op SymbolNode
+		op string
 		operands []Node
 	}
 
 	// InstructionNode represents instruction.
 	InstructionNode struct {
-		DirectiveNode
+		Position
+		op string
+		operands []Node
 	}
 
 	// CommentNode represents a comment.
@@ -116,8 +118,8 @@ func (n *LabelNode) String() string {
 }
 
 // helper for DirectiveNode and InstructionNode
-func cmdString(kind string, op Node, operands []Node) (s string) {
-	s = fmt.Sprintf("%s:(%v", kind, op)
+func cmdString(kind string, op string, operands []Node) (s string) {
+	s = fmt.Sprintf("%s:(%s", kind, op)
 	for _, o := range operands {
 		s += " " + o.String()
 	}
@@ -126,11 +128,11 @@ func cmdString(kind string, op Node, operands []Node) (s string) {
 }
 
 func (n *DirectiveNode) String() string {
-	return cmdString("directive", &n.op, n.operands)
+	return cmdString("directive", n.op, n.operands)
 }
 
 func (n *InstructionNode) String() string {
-	return cmdString("instruction", &n.op, n.operands)
+	return cmdString("instruction", n.op, n.operands)
 }
 
 func (n *CommentNode) String() string {
