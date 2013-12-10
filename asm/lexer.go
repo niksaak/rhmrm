@@ -181,6 +181,7 @@ func (l *Lexer) Scan() (pos Position, lm rune, lit string) {
 		default:
 			lit = string(l.ch)
 			lm = l.ch
+			l.next()
 		}
 	}
 	return
