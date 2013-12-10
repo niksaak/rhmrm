@@ -12,7 +12,7 @@ const (
 	EOF              // end of file
 
 	SYMBOL   // = <letter> { <letter> | <decimal> } .
-	REGISTER // = <letter> ( ( "0" ... "31" ) | [ "1" ] <letter> )
+	REGISTER // = <letter> ( "0" ... "31" )
 	STRING   // = '"' <anything> '"' .
 	INTEGER  // = <decimal> { <letter> | <decimal> } .
 	RUNE     // = "'" <rune or character code> "'" .
@@ -20,14 +20,14 @@ const (
 )
 
 var lxStrings = map[rune]string{
-	ILL: "ILLEGAL",
-	EOF: "EOF",
-	SYMBOL: "symbol",
+	ILL:      "ILLEGAL",
+	EOF:      "EOF",
+	SYMBOL:   "symbol",
 	REGISTER: "register",
-	STRING: "string",
-	INTEGER: "integer",
-	RUNE: "rune",
-	COMMENT: "comment",
+	STRING:   "string",
+	INTEGER:  "integer",
+	RUNE:     "rune",
+	COMMENT:  "comment",
 }
 
 func LexemeString(lm rune) (s string) {
@@ -77,9 +77,9 @@ type Lexer struct {
 	src []byte // source
 	err ErrorHandler
 
-	ch        rune // current character
-	off       int  // character offset
-	rd_off    int  // reading offset (position of the next character)
+	ch     rune // current character
+	off    int  // character offset
+	rd_off int  // reading offset (position of the next character)
 
 	ErrorCount int
 	Position
@@ -218,7 +218,7 @@ func (l *Lexer) scanString() (s string) {
 		}
 	}
 
-	s = string(l.src[off : l.off])
+	s = string(l.src[off:l.off])
 	l.next()
 	return
 }
@@ -247,7 +247,7 @@ func (l *Lexer) scanRune() (s string) {
 		l.error(pos, "illegal character literal")
 	}
 
-	s = string(l.src[off : l.off])
+	s = string(l.src[off:l.off])
 	l.next()
 	return
 }
@@ -260,7 +260,7 @@ func (l *Lexer) scanComment() string {
 		l.next()
 	}
 
-	return string(l.src[off : l.off])
+	return string(l.src[off:l.off])
 }
 
 func (l *Lexer) scanEscape(quote rune) {
