@@ -1,10 +1,19 @@
 package asm
 
-import "fmt"
+import (
+	"fmt"
+	"io"
+)
 
 type Node interface {
 	Pos() Position
 	fmt.Stringer
+}
+
+type TreeNode interface {
+	Node
+	Name() string
+	Tree() []Node
 }
 
 // Register kinds.
@@ -47,21 +56,21 @@ type (
 	// DirectiveNode represents assembler directive.
 	DirectiveNode struct {
 		Position
-		op string
+		op       string
 		operands []Node
 	}
 
 	// InstructionNode represents instruction.
 	InstructionNode struct {
 		Position
-		op string
+		op       string
 		operands []Node
 	}
 
 	// CommentNode represents a comment.
 	CommentNode struct {
 		Position
-		level int
+		level   int
 		comment string
 	}
 
@@ -70,7 +79,7 @@ type (
 	// RegisterNode represents a RHMRM register.
 	RegisterNode struct {
 		Position
-		kind int
+		kind  int
 		index int
 	}
 
@@ -94,20 +103,21 @@ type (
 
 	// BlockNode represents a block of clauses.
 	BlockNode struct {
-		ProgramNode
+		Position
+		clauses []Node
 	}
 )
 
-func (n ProgramNode) Pos() Position { return n.Position }
-func (n LabelNode) Pos() Position { return n.Position }
-func (n DirectiveNode) Pos() Position { return n.Position }
+func (n ProgramNode) Pos() Position     { return n.Position }
+func (n LabelNode) Pos() Position       { return n.Position }
+func (n DirectiveNode) Pos() Position   { return n.Position }
 func (n InstructionNode) Pos() Position { return n.Position }
-func (n CommentNode) Pos() Position { return n.Position }
-func (n RegisterNode) Pos() Position { return n.Position }
-func (n SymbolNode) Pos() Position { return n.Position }
-func (n IntegerNode) Pos() Position { return n.Position }
-func (n StringNode) Pos() Position { return n.Position }
-func (n BlockNode) Pos() Position { return n.Position }
+func (n CommentNode) Pos() Position     { return n.Position }
+func (n RegisterNode) Pos() Position    { return n.Position }
+func (n SymbolNode) Pos() Position      { return n.Position }
+func (n IntegerNode) Pos() Position     { return n.Position }
+func (n StringNode) Pos() Position      { return n.Position }
+func (n BlockNode) Pos() Position       { return n.Position }
 
 func (n *ProgramNode) String() string {
 	return fmt.Sprintf("program:( <%d clauses> )", len(n.clauses))
@@ -174,4 +184,44 @@ func (n *StringNode) String() string {
 
 func (n *BlockNode) String() string {
 	return fmt.Sprintf("block:( <%d clauses> )", len(n.clauses))
+}
+
+func (n ProgramNode) Name() string { return "program" }
+func (n BlockNode) Name() string   { return "block" }
+
+func (n ProgramNode) Tree() []Node { return n.clauses }
+func (n BlockNode) Tree() []Node   { return n.clauses }
+
+// PrintAST outputs abstract syntax tree into an io.Writer.
+func PrintAST(node Node, w io.Writer) (err error) {
+	putf := func(format string, args ...interface{}) {
+		_, err = fmt.Fprintf(w, format, args...)
+	}
+	var putnd func(Node, string)
+	putnd = func(n Node, indent string) {
+		if t, satisfies := n.(TreeNode); satisfies {
+			putf(indent + t.Name() + ":(")
+			if err != nil {
+				return
+			}
+			for _, nd := range t.Tree() {
+				putf("\n")
+				putnd(nd, indent+"  ")
+				if err != nil {
+					return
+				}
+			}
+			putf("\n" + indent + ")")
+		} else {
+			putf(indent+"%v", n)
+		}
+	}
+
+	putnd(node, "")
+	if err != nil {
+		return
+	}
+	putf("\n")
+
+	return
 }
