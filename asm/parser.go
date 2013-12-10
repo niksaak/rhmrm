@@ -13,21 +13,26 @@ type lexeme struct {
 // Parser implements building abstract syntax tree from lexeme stream.
 type Parser struct {
 	err        ErrorHandler
-	next       func() // function to get the next token, set by Init()
-	lexeme            // current lexeme
+	lexer      *Lexer
+	lexeme     // current lexeme
 	ErrorCount int
 }
 
-func (p *Parser) init(lx *Lexer, err ErrorHandler) *Parser {
+func (p *Parser) Init(lx *Lexer, err ErrorHandler) *Parser {
 	// initialize values
 	p.err = err
-	p.next = mkLexemeFetcher(lx, p)
+	p.lexer = lx
 	p.ErrorCount = 0
 
 	p.next() // fetch the first token
 	return p
 }
 
+func (p *Parser) next() {
+	p.pos, p.k, p.lit = p.lexer.Scan()
+}
+
+/* was a bad idea:
 func mkLexemeFetcher(lx *Lexer, p *Parser) func() {
 	ch := make(chan lexeme, 128)
 
@@ -38,21 +43,26 @@ func mkLexemeFetcher(lx *Lexer, p *Parser) func() {
 			lm.pos, lm.k, lm.lit = lx.Scan()
 			ch <- lm
 		}
+		ch <- lexeme{k: EOF}
 		close(ch)
 	}()
 
 	// fetching reseiver
 	return func() {
 		if lm, ok := <-ch; ok {
+			fmt.Printf("lexeme %q\n", LexemeString(p.k))
 			p.lexeme = lm
 		} else {
+			fmt.Printf("EOF")
 			p.lexeme = lexeme{k: EOF}
 		}
 	}
 }
+*/
 
 // ParseProgram transforms source into a tree.
-func (p *Parser) ParseProgram() (prog ProgramNode) {
+func (p *Parser) ParseProgram() (prog *ProgramNode) {
+	prog = new(ProgramNode)
 	switch p.k {
 	case ILL:
 		if p.next == nil {
@@ -62,7 +72,8 @@ func (p *Parser) ParseProgram() (prog ProgramNode) {
 		}
 	}
 	for p.k != EOF {
-		prog.clauses = ndappend(prog.clauses, p.parseClause()...)
+		nodes := p.parseClause()
+		prog.clauses = ndappend(prog.clauses, nodes...)
 	}
 	return
 }
@@ -70,7 +81,7 @@ func (p *Parser) ParseProgram() (prog ProgramNode) {
 // clause = [ label ] [ instruction | directive ] [ comment ] "\n" .
 func (p *Parser) parseClause() (nodes []Node) {
 	// parse label
-	nodes = ndappend(nodes, p.parseLabel())
+	nodes = append(nodes, p.parseLabel())
 
 	// parse directive or instruction
 	if n := p.parseDirective(); n != nil {
@@ -80,7 +91,7 @@ func (p *Parser) parseClause() (nodes []Node) {
 	}
 
 	// parse comment
-	nodes = ndappend(nodes, p.parseComment())
+	nodes = append(nodes, p.parseComment())
 
 	// check for errors
 	if p.k != '\n' {
@@ -203,13 +214,13 @@ func (p *Parser) parseRegister() Node {
 		// access modes for control register.
 		r.kind = controlRegisterKind & controlModes[p.k]
 		p.next()
-		if !p.lmexpect(SYMBOL) {
+		if !p.lmexpect(REGISTER) {
 			return nil
 		}
 		k, n, ok := reginfo(p.lit)
 		switch {
 		case !ok:
-			p.errorf("bad register: %s", p.lit)
+			p.errorf("bad register: %s (%d,%d)", p.lit, k, n)
 			return nil
 		case k != controlRegisterKind:
 			p.errorf("register is not control: %s", p.lit)
@@ -220,13 +231,13 @@ func (p *Parser) parseRegister() Node {
 		p.next()
 		fallthrough
 	default:
-		if !p.lmexpect(SYMBOL) {
+		if p.k != REGISTER {
 			return nil
 		}
 		// TODO: get rid of repeating somehow.
 		k, n, ok := reginfo(p.lit)
 		if !ok {
-			p.errorf("bad register: %s", p.lit)
+			p.errorf("bad register: %s (%d,%d)", p.lit, k, n)
 			return nil
 		}
 		r.kind = k
@@ -317,7 +328,7 @@ func (p *Parser) errorf(format string, args ...interface{}) {
 // lmexpect is a convenient helper for checking if current lexeme is desired.
 func (p *Parser) lmexpect(lm rune) bool {
 	if p.k != lm {
-		p.errorf("expected %s, got %s (%s)",
+		p.errorf("expected %s, got %q (%s)",
 			LexemeString(lm), p.lit, LexemeString(p.k))
 		return false
 	}
