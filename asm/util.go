@@ -37,12 +37,11 @@ func reginfo(r string) (kind, num int, ok bool) {
 	if n, found := general_regs[r]; found {
 		return gr, n, true
 	}
-	k := r[0]
-	n, err := strconv.ParseInt(r, 10, 8)
+	n, err := strconv.ParseInt(r[1:], 10, 8)
 	if err != nil {
 		return 0, 0, false
 	}
-	switch k {
+	switch r[0] {
 	case 'c':
 		return regnchk(7, cr, n)
 	case 'r':
