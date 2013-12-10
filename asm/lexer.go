@@ -325,25 +325,9 @@ func decimalp(ch rune) bool {
 	return unicode.IsDigit(ch)
 }
 
-func registerp(s string) bool {
-	if len(s) < 2 || 3 < len(s) {
-		return false
-	}
-	switch s {
-	case "zr", "ra", "fp", "sp", "pc", "ex", "ia", "im", "ir", "fl":
-		return true
-	default:
-		if !letterp(rune(s[0])) {
-			return false
-		}
-		for _, c := range s[1:] {
-			if !decimalp(c) {
-				return false
-			}
-		}
-		return true
-	}
-	return false
+func registerp(s string) (ok bool) {
+	_, _, ok = reginfo(s)
+	return
 }
 
 func digitVal(ch rune) int {
