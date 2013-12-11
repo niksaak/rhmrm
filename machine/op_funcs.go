@@ -1,4 +1,4 @@
-package rhmrm
+package machine
 
 type OpFunc func(m *Machine, args ...Word)
 

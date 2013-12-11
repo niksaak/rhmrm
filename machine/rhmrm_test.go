@@ -1,4 +1,4 @@
-package rhmrm
+package machine
 
 import "testing"
 
@@ -60,7 +60,7 @@ func TestImmediateLoadingAddition(t *testing.T) {
 		instr := Instruction(*m.Mem(*m.PC()))
 		t.Logf("r1: %04v; r2: %04v; pc: %04v",
 			*m.R(1), *m.R(2), *m.C(C_PC))
-		t.Logf("%2d %2d, %2d", instr.op(), instr.a(), instr.b())
+		t.Logf("%2d %2d, %2d", instr.Op(), instr.A(), instr.B())
 		_, i = m.Step()
 	}
 	if r := *m.R(R_1); r != 3 {

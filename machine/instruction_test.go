@@ -1,20 +1,20 @@
-package rhmrm
+package machine
 
 import "testing"
 
 func TestInstructionGetters(t *testing.T) {
 	t.Parallel()
 	var ti Instruction = 0xc0fe
-	if r, want := ti.op(), Word(ti) & 0x3f; r != want {
+	if r, want := ti.Op(), Word(ti) & 0x3f; r != want {
 		t.Errorf("Got %#x with .op(), want %#x", r, want)
 	}
-	if r, want := ti.a(), Word(ti) >> 6 & 0x1f; r != want {
+	if r, want := ti.A(), Word(ti) >> 6 & 0x1f; r != want {
 		t.Errorf("Got %#x with .a(), want %#x", r, want)
 	}
-	if r, want := ti.b(), Word(ti) >> 11 & 0x1f; r != want {
+	if r, want := ti.B(), Word(ti) >> 11 & 0x1f; r != want {
 		t.Errorf("Got %#x with .b(), want %#x", r, want)
 	}
-	if r, want := ti.c(), Word(ti) >> 6; r != want {
+	if r, want := ti.C(), Word(ti) >> 6; r != want {
 		t.Errorf("Got %#x with .c(), want %#x", r, want)
 	}
 } 
@@ -22,13 +22,13 @@ func TestInstructionGetters(t *testing.T) {
 func TestInstructionDecouplers(t *testing.T) {
 	t.Parallel()
 	ti := MkInstruction2(OP_ADD, R_9, R_18)
-	if r := ti.op(); r != OP_ADD {
+	if r := ti.Op(); r != OP_ADD {
 		t.Errorf("Op is %x, want %x", r, OP_ADD)
 	}
-	if r := ti.a(); r != R_9 {
+	if r := ti.A(); r != R_9 {
 		t.Errorf("A is %x, want %x", r, R_9)
 	}
-	if r := ti.b(); r != R_18 {
+	if r := ti.B(); r != R_18 {
 		t.Errorf("B is %x, want %x", r, R_18)
 	}
 }
@@ -36,7 +36,7 @@ func TestInstructionDecouplers(t *testing.T) {
 func TestInstructionNotOverlaps(t *testing.T) {
 	t.Parallel()
 	ti := MkInstruction2(0x3f, 0, 0x1f)
-	op, a, b := ti.op(), ti.a(), ti.b()
+	op, a, b := ti.Op(), ti.A(), ti.B()
 
 	if op != 0x3f {
 		t.Errorf("Op is %x, want %x", op, 0x3f)

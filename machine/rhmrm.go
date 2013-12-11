@@ -1,4 +1,4 @@
-package rhmrm
+package machine
 
 import "fmt"
 

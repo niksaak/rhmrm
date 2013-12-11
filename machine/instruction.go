@@ -1,4 +1,4 @@
-package rhmrm
+package machine
 
 import "fmt"
 
@@ -40,31 +40,31 @@ func sextend10(n Word) (r Word) {
 	return
 }
 
-// op returns lowest 6 bits of an instruction
-func (i Instruction) op() Word { return Word(i & 0x3f) }
+// Op returns lowest 6 bits of an instruction
+func (i Instruction) Op() Word { return Word(i & 0x3f) }
 
-// opstring returns string representation of the opcode
-func (i Instruction) opstring() string { return op_strings[i.op()] }
+// Opstring returns string representation of the opcode
+func (i Instruction) Opstring() string { return op_strings[i.Op()] }
 
-// a returns bits [9:5] of an instruction
-func (i Instruction) a() Word { return Word(i >> 6 & 0x1f) }
+// A returns bits [9:5] of an instruction
+func (i Instruction) A() Word { return Word(i >> 6 & 0x1f) }
 
-// b returns bits [15:10] of an instruction
-func (i Instruction) b() Word { return Word(i >> 11) }
+// B returns bits [15:10] of an instruction
+func (i Instruction) B() Word { return Word(i >> 11) }
 
-// c returns bits [15:6] of an instruction
-func (i Instruction) c() Word { return Word(i >> 6) }
+// C returns bits [15:6] of an instruction
+func (i Instruction) C() Word { return Word(i >> 6) }
 
-// cs is like c, but sign-extends the result to 16 bits
-func (i Instruction) cs() Word { return sextend10(i.c()) }
+// Cs is like c, but sign-extends the result to 16 bits
+func (i Instruction) Cs() Word { return sextend10(i.C()) }
 
 // decouple extracts operator and operands from an instruction
 func (i Instruction) decouple() (op Word, args []Word) {
-	op = i.op()
+	op = i.Op()
 	if op >= OP_IMP && op <= OP_CMN {
-		args = []Word{ i.a(), i.b() }
+		args = []Word{ i.A(), i.B() }
 	} else {
-		args = []Word{ i.c() }
+		args = []Word{ i.C() }
 	}
 	return
 }
@@ -100,21 +100,21 @@ func kstring(r Word) (str string) {
 
 func (i Instruction) String() (s string) {
 	switch {
-	case i.op() == OP_IMP:
+	case i.Op() == OP_IMP:
 		s = fmt.Sprintf("%3v %3v %2d",
-			i.opstring(), imp_strings[i.a()], i.b())
-	case i.op() == OP_MTC:
+			i.Opstring(), imp_strings[i.A()], i.B())
+	case i.Op() == OP_MTC:
 		s = fmt.Sprintf("%3v %s, %2d",
-			i.opstring(), kstring(i.a()), i.b())
-	case i.op() == OP_MFC:
+			i.Opstring(), kstring(i.A()), i.B())
+	case i.Op() == OP_MFC:
 		s = fmt.Sprintf("%3v %2d, %s",
-			i.opstring(), i.a(), kstring(i.b()))
-	case i.op() >= OP_MOV && i.op() <= OP_CMN:
-		s = fmt.Sprintf("%3v %2d, %d", i.opstring(), i.a(), i.b())
-	case i.op() >= OP_JMP && i.op() <= OP_JNE:
-		s = fmt.Sprintf("%3v %2d", i.opstring(), int16(i.cs()))
-	case i.op() == OP_SWI || i.op() == OP_HWI || i.op() == OP_IRE:
-		s = fmt.Sprintf("%3v %2d", i.opstring(), i.c())
+			i.Opstring(), i.A(), kstring(i.B()))
+	case i.Op() >= OP_MOV && i.Op() <= OP_CMN:
+		s = fmt.Sprintf("%3v %2d, %d", i.Opstring(), i.A(), i.B())
+	case i.Op() >= OP_JMP && i.Op() <= OP_JNE:
+		s = fmt.Sprintf("%3v %2d", i.Opstring(), int16(i.Cs()))
+	case i.Op() == OP_SWI || i.Op() == OP_HWI || i.Op() == OP_IRE:
+		s = fmt.Sprintf("%3v %2d", i.Opstring(), i.C())
 	}
 	return
 }
