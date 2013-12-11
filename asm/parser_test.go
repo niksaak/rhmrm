@@ -20,10 +20,13 @@ var asm = `
 func TestParseProgram(t *testing.T) {
 	err := mkErrFunction(t)
 	l := new(Lexer).Init([]byte(asm), "", err)
-	p := new(Parser).Init(l, err)
+	p := new(Parser).Init(l)
 	program := p.ParseProgram()
 	// TODO: check resulting ast in a proper way.
 	if program == nil {
 		t.Errorf("program was not parsed")
+	}
+	if n := p.ErrorCount; n > 0 {
+		t.Errorf("got %d parse errors", n)
 	}
 }

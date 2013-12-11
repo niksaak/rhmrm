@@ -106,6 +106,12 @@ type (
 		Position
 		clauses []Node
 	}
+
+	// ErrorNode represents parse error.
+	ErrorNode struct {
+		Position
+		message string
+	}
 )
 
 func (n ProgramNode) Pos() Position     { return n.Position }
@@ -118,6 +124,7 @@ func (n SymbolNode) Pos() Position      { return n.Position }
 func (n IntegerNode) Pos() Position     { return n.Position }
 func (n StringNode) Pos() Position      { return n.Position }
 func (n BlockNode) Pos() Position       { return n.Position }
+func (n ErrorNode) Pos() Position       { return n.Position }
 
 func (n *ProgramNode) String() string {
 	return fmt.Sprintf("program:( <%d clauses> )", len(n.clauses))
@@ -186,11 +193,20 @@ func (n *BlockNode) String() string {
 	return fmt.Sprintf("block:( <%d clauses> )", len(n.clauses))
 }
 
+func (n *ErrorNode) String() string {
+	return fmt.Sprintf("ERROR:%q", n.message)
+}
+
 func (n ProgramNode) Name() string { return "program" }
 func (n BlockNode) Name() string   { return "block" }
 
 func (n ProgramNode) Tree() []Node { return n.clauses }
 func (n BlockNode) Tree() []Node   { return n.clauses }
+
+// ErrorNode additionally implements error interface.
+func (n ErrorNode) Error() string {
+	return n.message
+}
 
 // PrintAST outputs abstract syntax tree into an io.Writer.
 func PrintAST(node Node, w io.Writer) (err error) {
