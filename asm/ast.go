@@ -197,11 +197,11 @@ func (n *ErrorNode) String() string {
 	return fmt.Sprintf("ERROR:%q", n.message)
 }
 
-func (n ProgramNode) Name() string { return "program" }
-func (n BlockNode) Name() string   { return "block" }
+func (n *ProgramNode) Name() string { return "program" }
+func (n *BlockNode) Name() string   { return "block" }
 
-func (n ProgramNode) Tree() []Node { return n.clauses }
-func (n BlockNode) Tree() []Node   { return n.clauses }
+func (n *ProgramNode) Tree() []Node { return n.clauses }
+func (n *BlockNode) Tree() []Node   { return n.clauses }
 
 // ErrorNode additionally implements error interface.
 func (n ErrorNode) Error() string {
@@ -215,7 +215,7 @@ func PrintAST(node Node, w io.Writer) (err error) {
 	}
 	var putnd func(Node, string)
 	putnd = func(n Node, indent string) {
-		if t, satisfies := n.(TreeNode); satisfies {
+		if t, ok := n.(TreeNode); ok {
 			putf(indent + t.Name() + ":(")
 			if err != nil {
 				return
