@@ -102,56 +102,56 @@ var op_funcs = []OpFunc{
 	
 	OP_ADD: func(m *Machine, args ...Word) {
 		a, b := get2r(args, m)
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		r := uint32(*a) + uint32(*b)
 		*ex = Word(r >> 16)
 		*a = Word(r)
 	},
 	OP_ADX: func(m *Machine, args ...Word) {
 		a, b := get2r(args, m)
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		r := uint32(*a) + uint32(*b) + uint32(*ex)
 		*ex = Word(r >> 16)
 		*a = Word(r)
 	},
 	OP_SUB: func(m *Machine, args ...Word) {
 		a, b := get2r(args, m)
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		r := uint32(*a) - uint32(*b)
 		*ex = Word(r >> 16)
 		*a = Word(r)
 	},
 	OP_SBX: func(m *Machine, args ...Word) {
 		a, b := get2r(args, m)
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		r := uint32(*a) - uint32(*b) + uint32(*ex)
 		*ex = Word(r >> 16)
 		*a = Word(r)
 	},
 	OP_MUL: func(m *Machine, args ...Word) {
 		a, b := get2r(args, m)
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		r := uint32(*a) * uint32(*b)
 		*ex = Word(r >> 16)
 		*a = Word(r)
 	},
 	OP_MLI: func(m *Machine, args ...Word) {
 		a, b := get2r(args, m)
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		r := int32(*a) * int32(*b)
 		*ex = Word(r >> 16)
 		*a = Word(r)
 	},
 	OP_DIV: func(m *Machine, args ...Word) {
 		a, b := get2r(args, m)
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		r := uint32(*a) << 16 / uint32(*b)
 		*ex = Word(r)
 		*a = Word(r >> 16)
 	},
 	OP_DVI: func(m *Machine, args ...Word) {
 		a, b := get2r(args, m)
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		r := int32(*a) << 16 / int32(*b)
 		*ex = Word(r)
 		*a = Word(r >> 16)
@@ -183,21 +183,21 @@ var op_funcs = []OpFunc{
 	},
 	OP_SHL: func(m *Machine, args ...Word) {
 		a, b := get2r(args, m)
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		r := uint32(*a) << uint32(*b)
 		*ex = Word(r >> 16)
 		*a = Word(r)
 	},
 	OP_ASR: func(m *Machine, args ...Word) {
 		a, b := get2r(args, m)
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		r := int32(*a) << 16 >> uint32(*b)
 		*ex = Word(r)
 		*a = Word(r >> 16)
 	},
 	OP_SHR: func(m *Machine, args ...Word) {
 		a, b := get2r(args, m)
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		r := uint32(*a) << 16 >> uint32(*b)
 		*ex = Word(r)
 		*a = Word(r >> 16)
@@ -215,22 +215,22 @@ var op_funcs = []OpFunc{
 
 	OP_TST: func(m *Machine, args ...Word) {
 		a, b := get2r(args, m)
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		*ex = *a & *b
 	},
 	OP_TEQ: func(m *Machine, args ...Word) {
 		a, b := get2r(args, m)
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		*ex = *a ^ *b
 	},
 	OP_CMP: func(m *Machine, args ...Word) {
 		a, b := get2r(args, m)
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		*ex = *a - *b
 	},
 	OP_CMN: func(m *Machine, args ...Word) {
 		a, b := get2r(args, m)
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		*ex = *a + *b
 	},
 
@@ -240,64 +240,64 @@ var op_funcs = []OpFunc{
 	},
 	OP_JLT: func(m *Machine, args ...Word) {
 		c := args[0]
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		if *ex < 0 {
 			*m.PC() += sextend10(c) - 1
 		}
 	},
 	OP_JLE: func(m *Machine, args ...Word) {
 		c := args[0]
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		if *ex <= 0 {
 			*m.PC() += sextend10(c) - 1
 		}
 	},
 	OP_JGT: func(m *Machine, args ...Word) {
 		c := args[0]
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		if *ex > 0 {
 			*m.PC() += sextend10(c) - 1
 		}
 	},
 	OP_JGE: func(m *Machine, args ...Word) {
 		c := args[0]
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		if *ex >= 0 {
 			*m.PC() += sextend10(c) - 1
 		}
 	},
 	OP_JEQ: func(m *Machine, args ...Word) {
 		c := args[0]
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		if *ex == 0 {
 			*m.PC() += sextend10(c) - 1
 		}
 	},
 	OP_JNE: func(m *Machine, args ...Word) {
 		c := args[0]
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		if *ex != 0 {
 			*m.PC() += sextend10(c) - 1
 		}
 	},
 
 	OP_SWI: func(m *Machine, args ...Word) {	
-		*m.C(C_IR) = *m.PC()
-		*m.PC() = *m.C(C_IA)
-		*m.C(C_IM) = args[0]
-		(*FlagsRegister)(m.C(C_FL)).SetI(true)
-		(*FlagsRegister)(m.C(C_FL)).SetS(true)
+		*m.C(IR) = *m.PC()
+		*m.PC() = *m.C(IA)
+		*m.C(IM) = args[0]
+		(*FlagsRegister)(m.C(FL)).SetI(true)
+		(*FlagsRegister)(m.C(FL)).SetS(true)
 	},
 	OP_HWI: func(m *Machine, args ...Word) {
 		m.interrupt.trigger = true
 		m.interrupt.message = args[0]
-		*m.C(C_IM) = args[0]
+		*m.C(IM) = args[0]
 	},
 	OP_IRE: func(m *Machine, args ...Word) {
-		*m.PC() = *m.C(C_IR)
-		(*FlagsRegister)(m.C(C_FL)).SetI(false)
+		*m.PC() = *m.C(IR)
+		(*FlagsRegister)(m.C(FL)).SetI(false)
 		if args[0] != 0 {
-			(*FlagsRegister)(m.C(C_FL)).SetS(false)
+			(*FlagsRegister)(m.C(FL)).SetS(false)
 		}
 	},
 }
@@ -305,11 +305,11 @@ var op_funcs = []OpFunc{
 // Immediate operand operators
 var imp_funcs = []OpFunc{
 	IMP_BRK: func(m *Machine, args ...Word) {
-		*m.C(C_IR) = *m.PC()
-		*m.PC() = *m.C(C_IA)
-		*m.C(C_IM) = 0xffff
-		(*FlagsRegister)(m.C(C_FL)).SetI(true)
-		(*FlagsRegister)(m.C(C_FL)).SetS(true)
+		*m.C(IR) = *m.PC()
+		*m.PC() = *m.C(IA)
+		*m.C(IM) = 0xffff
+		(*FlagsRegister)(m.C(FL)).SetI(true)
+		(*FlagsRegister)(m.C(FL)).SetS(true)
 	},
 	IMP_MOV: func(m *Machine, args ...Word) {
 		a, n := get2rn(args, m)
@@ -346,49 +346,49 @@ var imp_funcs = []OpFunc{
 
 	IMP_ADD: func(m *Machine, args ...Word) {
 		a, n := get2rn(args, m)
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		r := uint32(*a) + uint32(n)
 		*a, *ex = Word(r), Word(r >> 16)
 	},
 	IMP_ADX: func(m *Machine, args ...Word) {
 		a, n := get2rn(args, m)
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		r := uint32(*a) + uint32(n) + uint32(*ex)
 		*a, *ex = Word(r), Word(r >> 16)
 	},
 	IMP_SUB: func(m *Machine, args ...Word) {
 		a, n := get2rn(args, m)
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		r := uint32(*a) - uint32(n)
 		*a, *ex = Word(r), Word(r >> 16)
 	},
 	IMP_SBX: func(m *Machine, args ...Word) {
 		a, n := get2rn(args, m)
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		r := uint32(*a) - uint32(n) + uint32(*ex)
 		*a, *ex = Word(r), Word(r >> 16)
 	},
 	IMP_MUL: func(m *Machine, args ...Word) {
 		a, n := get2rn(args, m)
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		r := uint32(*a) * uint32(n)
 		*a, *ex = Word(r), Word(r >> 16)
 	},
 	IMP_MLI: func(m *Machine, args ...Word) {
 		a, n := get2rn(args, m)
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		r := int32(*a) * int32(n)
 		*a, *ex = Word(r), Word(r >> 16)
 	},
 	IMP_DIV: func(m *Machine, args ...Word) {
 		a, n := get2rn(args, m)
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		r := uint32(*a) << 16 / uint32(n)
 		*a, *ex = Word(r >> 16), Word(r)
 	},
 	IMP_DVI: func(m *Machine, args ...Word) {
 		a, n := get2rn(args, m)
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		r := int32(*a) << 16 / int32(n)
 		*a, *ex = Word(r >> 16), Word(r)
 	},
@@ -422,19 +422,19 @@ var imp_funcs = []OpFunc{
 		*a &^= n
 	},
 	IMP_SHL: func(m *Machine, args ...Word) {
-		a, n, ex := m.R(args[0]), args[1], m.C(C_EX)
+		a, n, ex := m.R(args[0]), args[1], m.C(EX)
 		r := uint32(*a) << uint32(n)
 		*ex = Word(r >> 16)
 		*a = Word(r)
 	},
 	IMP_ASR: func(m *Machine, args ...Word) {
-		a, n, ex := m.R(args[0]), args[1], m.C(C_EX)
+		a, n, ex := m.R(args[0]), args[1], m.C(EX)
 		r := int32(*a) << 16 >> uint32(n)
 		*ex = Word(r)
 		*a = Word(r >> 16)
 	},
 	IMP_SHR: func(m *Machine, args ...Word) {
-		a, n, ex := m.R(args[0]), args[1], m.C(C_EX)
+		a, n, ex := m.R(args[0]), args[1], m.C(EX)
 		r := uint32(*a) << 16 >> uint32(n)
 		*ex = Word(r)
 		*a = Word(r >> 16)
@@ -452,22 +452,22 @@ var imp_funcs = []OpFunc{
 
 	IMP_TST: func(m *Machine, args ...Word) {
 		a, n := get2rn(args, m)
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		*ex = *a & n
 	},
 	IMP_TEQ: func(m *Machine, args ...Word) {
 		a, n := get2rn(args, m)
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		*ex = *a ^ n
 	},
 	IMP_CMP: func(m *Machine, args ...Word) {
 		a, n := get2rn(args, m)
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		*ex = *a - n
 	},
 	IMP_CMN: func(m *Machine, args ...Word) {
 		a, n := get2rn(args, m)
-		ex := m.C(C_EX)
+		ex := m.C(EX)
 		*ex = *a + n
 	},
 }

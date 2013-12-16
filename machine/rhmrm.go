@@ -2,58 +2,33 @@ package machine
 
 import "fmt"
 
-// General registers.
+// General register indexing constants. Example usage:
+//   R+9 // index of global register #9
+//   V+0 // index of value register #0
+//   SP  // index of stack pointer register.
 const (
-	R_0, R_ZR = iota, iota
-
-	R_1, R_RA
-
-	R_2, R_S0
-	R_3, R_S1
-	R_4, R_S2
-	R_5, R_S3
-	R_6, R_S4
-	R_7, R_S5
-	R_8, R_S6
-	R_9, R_S7
-
-	R_10, R_T0
-	R_11, R_T1
-	R_12, R_T2
-	R_13, R_T3
-	R_14, R_T4
-	R_15, R_T5
-	R_16, R_T6
-	R_17, R_T7
-
-	R_18, R_V0
-	R_19, R_V1
-	R_20, R_V2
-	R_21, R_V3
-
-	R_22, R_A0
-	R_23, R_A1
-	R_24, R_A2
-	R_25, R_A3
-	R_26, R_A4
-	R_27, R_A5
-	R_28, R_A6
-	R_29, R_A7
-
-	R_30, R_FP
-	R_31, R_SP
+	R = 0 // Global register prefix.
+	ZR = 0 // ZR (zero) register.
+	RA = R+1 // RA (return address) register.
+	S = R+2 // S (saved) register prefix, valid indices from 0 to 7.
+	T = R+10 // T (temporary) register prefix, 0 to 7.
+	V = R+18 // V (value) register prefix, 0 to 3.
+	A = R+22 // A (argument) register prefix, 0 to 7.
+	FP = R+30 // FP (frame pointer) register.
+	SP = R+31 // SP (stack pointer).
 )
 
-// Control registers.
+// Control registers. Example usage:
+//   C+4 // index of control register #4.
+//   IR  // index of interrupt return register.
 const (
-	C_0, C_PC = iota, iota
-	C_1, C_EX
-	C_2, _
-	C_3, _
-	C_4, C_IA
-	C_5, C_IM
-	C_6, C_IR
-	C_7, C_FL
+	C = 0 // Control register prefix.
+	PC = C+0 // PC (program counter) register.
+	EX = C+1 // EX (extra or excess) register.
+	IA = C+4 // IA (interrupt address) register.
+	IM = C+5 // IM (interrupt message) register.
+	IR = C+6 // IR (interrupt return) register.
+	FL = C+7 // FL (flags) register.
 )
 
 // Control register acces modes.
@@ -256,7 +231,7 @@ func (m *Machine) C(c Word) *Word {
 
 // PC returns program counter of the machine
 func (m *Machine) PC() *Word {
-	return &m.ctrl[C_PC]
+	return &m.ctrl[PC]
 }
 
 // Mem returns a pointer to a word in Machine memory.

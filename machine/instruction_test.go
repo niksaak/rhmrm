@@ -21,15 +21,15 @@ func TestInstructionGetters(t *testing.T) {
 
 func TestInstructionDecouplers(t *testing.T) {
 	t.Parallel()
-	ti := MkInstruction2(OP_ADD, R_9, R_18)
+	ti := MkInstruction2(OP_ADD, R+9, R+18)
 	if r := ti.Op(); r != OP_ADD {
 		t.Errorf("Op is %x, want %x", r, OP_ADD)
 	}
-	if r := ti.A(); r != R_9 {
-		t.Errorf("A is %x, want %x", r, R_9)
+	if r := ti.A(); r != R+9 {
+		t.Errorf("A is %x, want %x", r, R+9)
 	}
-	if r := ti.B(); r != R_18 {
-		t.Errorf("B is %x, want %x", r, R_18)
+	if r := ti.B(); r != R+18 {
+		t.Errorf("B is %x, want %x", r, R+18)
 	}
 }
 
