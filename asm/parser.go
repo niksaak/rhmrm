@@ -2,6 +2,7 @@ package asm
 
 import (
 	"fmt"
+	"unicode"
 )
 
 type lexeme struct {
@@ -31,21 +32,21 @@ func (p *Parser) next() {
 }
 
 // ParseProgram transforms source into a tree.
-func (p *Parser) ParseProgram() (prog *ProgramNode) {
-	prog = new(ProgramNode)
+func (p *Parser) ParseProgram() Node {
+	prog := new(ProgramNode)
 	switch p.k {
 	case ILL:
-		if p.next == nil {
-			p.error("parser is not initialized")
+		if p.lexer == nil {
+			return p.error("parser is not initialized")
 		} else {
-			p.errorf("illegal lexeme: %s", p.lit)
+			return p.errorf("illegal lexeme: %s", p.lit)
 		}
 	}
 	for p.k != EOF {
 		nodes := p.parseClause()
 		prog.clauses = ndappend(prog.clauses, nodes...)
 	}
-	return
+	return prog
 }
 
 // clause = [ label ] [ instruction | directive ] [ comment ] "\n" .
@@ -85,8 +86,8 @@ func (p *Parser) parseLabel() Node {
 	}
 	pos := p.pos
 	p.next()
-	if !p.lmexpect(SYMBOL) {
-		return nil
+	if err := p.lmexpect(SYMBOL); err != nil {
+		return err
 	}
 	name := p.lit
 	p.next()
@@ -102,8 +103,8 @@ func (p *Parser) parseDirective() Node {
 	p.next()
 
 	// operator
-	if !p.lmexpect(SYMBOL) {
-		return nil
+	if err := p.lmexpect(SYMBOL); err != nil {
+		return err
 	}
 	sym := p.lit
 	p.next()
@@ -137,10 +138,18 @@ func (p *Parser) parseComment() (c Node) {
 		return nil
 	}
 	i := 0
+	level := 0
+	// get comment level from semicolon count
 	for i < len(p.lit) && p.lit[i] == ';' {
+		level++
 		i++
 	}
-	c = &CommentNode{p.pos, i, p.lit[i:]}
+	// skip leftover whitespace
+	// TODO: make checking for whitespace more efficient.
+	for i < len(p.lit) && unicode.IsSpace(rune(p.lit[i])) {
+		i++
+	}
+	c = &CommentNode{p.pos, level, p.lit[i:]}
 	p.next()
 	return
 }
@@ -185,7 +194,7 @@ func (p *Parser) parseRegister() (er Node) {
 		// access modes for control register.
 		r.kind = controlRegisterKind & controlModes[p.k]
 		p.next()
-		if !p.lmexpect(REGISTER) {
+		if err := p.lmexpect(REGISTER); err != nil {
 			return nil
 		}
 		k, n, ok := reginfo(p.lit)
@@ -219,36 +228,36 @@ func (p *Parser) parseRegister() (er Node) {
 }
 
 // symbol = <symbol> .
-func (p *Parser) parseSymbol() Node {
+func (p *Parser) parseSymbol() (n Node) {
 	if p.k != SYMBOL {
 		return nil
 	}
+	n = &SymbolNode{p.pos, p.lit}
 	p.next()
-	return &SymbolNode{p.pos, p.lit}
+	return
 }
 
 // integer = <integer, prefixed or suffixed>
-func (p *Parser) parseInteger() (i Node) {
+func (p *Parser) parseInteger() Node {
 	if p.k != INTEGER {
 		return nil
 	}
 	n, err := atoi(p.lit)
 	if err != nil {
-		i = p.errorf("bad integer: %s (%s)", p.lit, err)
-		return
+		return p.errorf("bad integer: %s (%s)", p.lit, err)
 	}
 	p.next()
 	return &IntegerNode{p.pos, n}
 }
 
 // string = '"' <anything> '"'
-func (p *Parser) parseString() Node {
+func (p *Parser) parseString() (n Node) {
 	if p.k != STRING {
 		return nil
 	}
-	pos, str := p.pos, p.lit
+	n = &StringNode{p.pos, p.lit}
 	p.next()
-	return &StringNode{pos, str}
+	return
 }
 
 // block = "{" { clause } "}"
@@ -258,6 +267,16 @@ func (p *Parser) parseBlock() (n Node) {
 	}
 	p.next()
 	b := new(BlockNode)
+	if p.k == COMMENT { // accept comment after '{'
+		b.clauses = append(b.clauses, p.parseComment())
+		p.next()
+	}
+	/*
+	// FIXME: why do we not get '\n' here?
+	if err := p.lmexpect('\n'); err != nil {
+		return err
+	}
+	*/
 	for p.k != '}' {
 		if p.k == EOF {
 			return p.error("unexpected EOF")
@@ -281,13 +300,12 @@ func (p *Parser) errorf(format string, args ...interface{}) *ErrorNode {
 }
 
 // lmexpect is a convenient helper for checking if current lexeme is desired.
-func (p *Parser) lmexpect(lm rune) bool {
+func (p *Parser) lmexpect(lm rune) (err *ErrorNode) {
 	if p.k != lm {
-		p.errorf("expected %s, got %q (%s)",
+		return p.errorf("expected %s, got %q (%s)",
 			LexemeString(lm), p.lit, LexemeString(p.k))
-		return false
 	}
-	return true
+	return nil
 }
 
 // append non-nil nodes to a slice and return it.
