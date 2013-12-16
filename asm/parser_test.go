@@ -15,13 +15,22 @@ var asm = `
      add r1, 1eech ;; no label, suffixed hex number
 :_bar              ;; no instruction, private label
      mtc &pc, r1   ;; prefixed control register
+
+.word foo          ;; directive with one argument
+.macro foo {       ;; macro with block start
+     imp mli r1, 2 ;; instr with no comma inside a block
+}
 `
 
 func TestParseProgram(t *testing.T) {
+	str := new(stringWriter)
 	err := mkErrFunction(t)
 	l := new(Lexer).Init([]byte(asm), "", err)
 	p := new(Parser).Init(l)
 	program := p.ParseProgram()
+	PrintAST(program, str)
+	t.Log("parse tree:")
+	t.Log(str.string)
 	// TODO: check resulting ast in a proper way.
 	if program == nil {
 		t.Errorf("program was not parsed")
