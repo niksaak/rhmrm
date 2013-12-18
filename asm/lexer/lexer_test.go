@@ -1,4 +1,4 @@
-package asm
+package lexer
 
 import "testing"
 import "fmt"

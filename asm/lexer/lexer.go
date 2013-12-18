@@ -1,4 +1,6 @@
-package asm
+package lexer
+
+import "github.com/niksaak/rhmrm/asm/util"
 
 import (
 	"fmt"
@@ -326,7 +328,7 @@ func decimalp(ch rune) bool {
 }
 
 func registerp(s string) (ok bool) {
-	_, _, ok = reginfo(s)
+	_, _, ok = util.Reginfo(s)
 	return
 }
 
