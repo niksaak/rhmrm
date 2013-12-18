@@ -1,10 +1,34 @@
-package asm
+package util
 
 import "strconv"
 
-import "github.com/niksaak/rhmrm/machine"
+import (
+	"github.com/niksaak/rhmrm/machine"
+)
 
-var control_regs = map[string]int{
+// Register kinds.
+const (
+	GeneralRegisterKind = iota << 28
+	ControlRegisterKind
+	// to be expanded in future
+)
+
+// Control register acces modes.
+const (
+	ControlSETMode = iota
+	ControlANDMode
+	ControlIORMode
+	ControlXORMode
+)
+
+var ControlModes = map[rune]int{
+	'=': ControlSETMode,
+	'&': ControlANDMode,
+	'|': ControlIORMode,
+	'^': ControlXORMode,
+}
+
+var ControlRegs = map[string]int{
 	"pc": machine.PC,
 	"ex": machine.EX,
 	"ia": machine.IA,
@@ -12,7 +36,7 @@ var control_regs = map[string]int{
 	"ir": machine.IR,
 	"fl": machine.FL,
 }
-var general_regs = map[string]int{
+var GeneralRegs = map[string]int{
 	"zr": machine.ZR,
 	"ra": machine.RA,
 	"fp": machine.FP,
@@ -28,13 +52,13 @@ func regnchk(max, kind int, num int64) (int, int, bool) {
 }
 
 // check if string designates register and return register kind and index.
-func reginfo(r string) (kind, num int, ok bool) {
-	const cr = controlRegisterKind
-	const gr = generalRegisterKind
-	if n, found := control_regs[r]; found {
+func Reginfo(r string) (kind, num int, ok bool) {
+	const cr = ControlRegisterKind
+	const gr = GeneralRegisterKind
+	if n, found := ControlRegs[r]; found {
 		return cr, n, true
 	}
-	if n, found := general_regs[r]; found {
+	if n, found := GeneralRegs[r]; found {
 		return gr, n, true
 	}
 	n, err := strconv.ParseInt(r[1:], 10, 8)
@@ -59,7 +83,7 @@ func reginfo(r string) (kind, num int, ok bool) {
 }
 
 // get base from string, return base and string without base part.
-func getBase(s string) (int, string) {
+func GetBase(s string) (int, string) {
 	// strings of length 1 do not have any affixes
 	if len(s) == 1 {
 		return 10, s
@@ -87,8 +111,8 @@ func getBase(s string) (int, string) {
 }
 
 // convert string to an integer.
-func atoi(s string) (int, error) {
-	b, s := getBase(s)
+func Atoi(s string) (int, error) {
+	b, s := GetBase(s)
 	n, err := strconv.ParseInt(s, b, 32)
 	return int(n), err
 }
