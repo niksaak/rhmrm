@@ -23,14 +23,12 @@ var asm = `
 `
 
 func TestParseProgram(t *testing.T) {
-	str := new(stringWriter)
+	t.Parallel()
 	err := mkErrFunction(t)
 	l := new(Lexer).Init([]byte(asm), "", err)
 	p := new(Parser).Init(l)
+
 	program := p.ParseProgram()
-	PrintAST(program, str)
-	t.Log("parse tree:")
-	t.Log(str.string)
 	// TODO: check resulting ast in a proper way.
 	if program == nil {
 		t.Errorf("program was not parsed")
