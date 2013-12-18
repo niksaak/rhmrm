@@ -1,24 +1,27 @@
-package asm
+package parser
 
 import (
 	"fmt"
 	"unicode"
+	"github.com/niksaak/rhmrm/asm/ast"
+	"github.com/niksaak/rhmrm/asm/lexer"
+	"github.com/niksaak/rhmrm/asm/util"
 )
 
 type lexeme struct {
-	pos Position // position info
+	pos lexer.Position // position info
 	k   rune     // kind
 	lit string   // literal string which lexeme represents
 }
 
 // Parser implements building abstract syntax tree from lexeme stream.
 type Parser struct {
-	lexer      *Lexer
+	lexer      *lexer.Lexer
 	lexeme     // current lexeme
 	ErrorCount int
 }
 
-func (p *Parser) Init(lx *Lexer) *Parser {
+func (p *Parser) Init(lx *lexer.Lexer) *Parser {
 	// initialize values
 	p.lexer = lx
 	p.ErrorCount = 0
@@ -32,25 +35,25 @@ func (p *Parser) next() {
 }
 
 // ParseProgram transforms source into a tree.
-func (p *Parser) ParseProgram() Node {
-	prog := new(ProgramNode)
+func (p *Parser) ParseProgram() ast.Node {
+	prog := new(ast.ProgramNode)
 	switch p.k {
-	case ILL:
+	case lexer.ILL:
 		if p.lexer == nil {
 			return p.error("parser is not initialized")
 		} else {
 			return p.errorf("illegal lexeme: %s", p.lit)
 		}
 	}
-	for p.k != EOF {
+	for p.k != lexer.EOF {
 		nodes := p.parseClause()
-		prog.clauses = ndappend(prog.clauses, nodes...)
+		prog.Clauses = ndappend(prog.Clauses, nodes...)
 	}
 	return prog
 }
 
 // clause = [ label ] [ instruction | directive ] [ comment ] "\n" .
-func (p *Parser) parseClause() (nodes []Node) {
+func (p *Parser) parseClause() (nodes []ast.Node) {
 	// parse label
 	nodes = append(nodes, p.parseLabel())
 
@@ -66,7 +69,7 @@ func (p *Parser) parseClause() (nodes []Node) {
 
 	// check for errors
 	if p.k != '\n' {
-		if p.k == EOF {
+		if p.k == lexer.EOF {
 			// illegal EOF is already reported at this point
 			return
 		}
@@ -80,22 +83,22 @@ func (p *Parser) parseClause() (nodes []Node) {
 }
 
 // label = ":" symbol .
-func (p *Parser) parseLabel() Node {
+func (p *Parser) parseLabel() ast.Node {
 	if p.k != ':' { // labels start with colon
 		return nil
 	}
 	pos := p.pos
 	p.next()
-	if err := p.lmexpect(SYMBOL); err != nil {
+	if err := p.lmexpect(lexer.SYMBOL); err != nil {
 		return err
 	}
 	name := p.lit
 	p.next()
-	return &LabelNode{pos, name}
+	return &ast.LabelNode{pos, name}
 }
 
 // directive = "." symbol [ operands ] .
-func (p *Parser) parseDirective() Node {
+func (p *Parser) parseDirective() ast.Node {
 	if p.k != '.' { // directives start with a dot
 		return nil
 	}
@@ -103,7 +106,7 @@ func (p *Parser) parseDirective() Node {
 	p.next()
 
 	// operator
-	if err := p.lmexpect(SYMBOL); err != nil {
+	if err := p.lmexpect(lexer.SYMBOL); err != nil {
 		return err
 	}
 	sym := p.lit
@@ -112,12 +115,12 @@ func (p *Parser) parseDirective() Node {
 	// operands
 	operands := p.parseOperands()
 
-	return &DirectiveNode{pos, sym, operands}
+	return &ast.DirectiveNode{pos, sym, operands}
 }
 
 // instruction = symbol [ operands ] .
-func (p *Parser) parseInstruction() Node {
-	if p.k != SYMBOL { // instructions start with a symbol
+func (p *Parser) parseInstruction() ast.Node {
+	if p.k != lexer.SYMBOL { // instructions start with a symbol
 		return nil
 	}
 	pos := p.pos
@@ -129,12 +132,12 @@ func (p *Parser) parseInstruction() Node {
 	// operands
 	operands := p.parseOperands()
 
-	return &InstructionNode{pos, sym, operands}
+	return &ast.InstructionNode{pos, sym, operands}
 }
 
 // comment = <comment-line-token> .
-func (p *Parser) parseComment() (c Node) {
-	if p.k != COMMENT { // comments are termins
+func (p *Parser) parseComment() (c ast.Node) {
+	if p.k != lexer.COMMENT { // comments are termins
 		return nil
 	}
 	i := 0
@@ -149,13 +152,13 @@ func (p *Parser) parseComment() (c Node) {
 	for i < len(p.lit) && unicode.IsSpace(rune(p.lit[i])) {
 		i++
 	}
-	c = &CommentNode{p.pos, level, p.lit[i:]}
+	c = &ast.CommentNode{p.pos, level, p.lit[i:]}
 	p.next()
 	return
 }
 
 // operands = [ operand { [ "," ] operand } ] .
-func (p *Parser) parseOperands() (operands []Node) {
+func (p *Parser) parseOperands() (operands []ast.Node) {
 	o := p.parseOperand()
 	for o != nil {
 		if p.k == ',' { // skip commas
@@ -168,9 +171,9 @@ func (p *Parser) parseOperands() (operands []Node) {
 }
 
 // operand = register | symbol | integer | string | block .
-func (p *Parser) parseOperand() (o Node) {
+func (p *Parser) parseOperand() (o ast.Node) {
 	// pro'lly there's a better way, but this looks kinda cool too
-	for _, fn := range []func() Node{
+	for _, fn := range []func() ast.Node{
 		p.parseRegister,
 		p.parseSymbol,
 		p.parseInteger,
@@ -187,88 +190,88 @@ func (p *Parser) parseOperand() (o Node) {
 }
 
 // register = <general-register> | [ <access-mode> ] <control-register> .
-func (p *Parser) parseRegister() (er Node) {
-	r := &RegisterNode{Position: p.pos}
+func (p *Parser) parseRegister() (er ast.Node) {
+	r := &ast.RegisterNode{Position: p.pos}
 	switch p.k {
 	case '&', '|', '^':
 		// access modes for control register.
-		r.kind = controlRegisterKind & controlModes[p.k]
+		r.Kind = util.ControlRegisterKind & util.ControlModes[p.k]
 		p.next()
-		if err := p.lmexpect(REGISTER); err != nil {
+		if err := p.lmexpect(lexer.REGISTER); err != nil {
 			return nil
 		}
-		k, n, ok := reginfo(p.lit)
+		k, n, ok := util.Reginfo(p.lit)
 		switch {
 		case !ok:
 			er = p.errorf("bad register: %s (%d,%d)", p.lit, k, n)
 			return
-		case k != controlRegisterKind:
+		case k != util.ControlRegisterKind:
 			er = p.errorf("register is not control: %s", p.lit)
 			return
 		}
-		r.index = n
+		r.Index = n
 	case '=':
 		p.next()
 		fallthrough
 	default:
-		if p.k != REGISTER {
+		if p.k != lexer.REGISTER {
 			return nil
 		}
 		// TODO: get rid of repeating somehow.
-		k, n, ok := reginfo(p.lit)
+		k, n, ok := util.Reginfo(p.lit)
 		if !ok {
 			er = p.errorf("bad register: %s (%d,%d)", p.lit, k, n)
 			return
 		}
-		r.kind = k
-		r.index = n
+		r.Kind = k
+		r.Index = n
 	}
 	p.next()
 	return r
 }
 
 // symbol = <symbol> .
-func (p *Parser) parseSymbol() (n Node) {
-	if p.k != SYMBOL {
+func (p *Parser) parseSymbol() (n ast.Node) {
+	if p.k != lexer.SYMBOL {
 		return nil
 	}
-	n = &SymbolNode{p.pos, p.lit}
+	n = &ast.SymbolNode{p.pos, p.lit}
 	p.next()
 	return
 }
 
 // integer = <integer, prefixed or suffixed>
-func (p *Parser) parseInteger() Node {
-	if p.k != INTEGER {
+func (p *Parser) parseInteger() ast.Node {
+	if p.k != lexer.INTEGER {
 		return nil
 	}
-	n, err := atoi(p.lit)
+	n, err := util.Atoi(p.lit)
 	if err != nil {
 		return p.errorf("bad integer: %s (%s)", p.lit, err)
 	}
 	p.next()
-	return &IntegerNode{p.pos, n}
+	return &ast.IntegerNode{p.pos, n}
 }
 
 // string = '"' <anything> '"'
-func (p *Parser) parseString() (n Node) {
-	if p.k != STRING {
+func (p *Parser) parseString() (n ast.Node) {
+	if p.k != lexer.STRING {
 		return nil
 	}
-	n = &StringNode{p.pos, p.lit}
+	n = &ast.StringNode{p.pos, p.lit}
 	p.next()
 	return
 }
 
 // block = "{" { clause } "}"
-func (p *Parser) parseBlock() (n Node) {
+func (p *Parser) parseBlock() (n ast.Node) {
 	if p.k != '{' { // blocks start with '{'
 		return nil
 	}
 	p.next()
-	b := new(BlockNode)
-	if p.k == COMMENT { // accept comment after '{'
-		b.clauses = append(b.clauses, p.parseComment())
+	b := new(ast.BlockNode)
+	if p.k == lexer.COMMENT { // accept comment after '{'
+		b.Clauses = append(b.Clauses, p.parseComment())
 		p.next()
 	}
 	/*
@@ -278,38 +281,38 @@ func (p *Parser) parseBlock() (n Node) {
 	}
 	*/
 	for p.k != '}' {
-		if p.k == EOF {
+		if p.k == lexer.EOF {
 			return p.error("unexpected EOF")
 		}
-		b.clauses = ndappend(b.clauses, p.parseClause()...)
+		b.Clauses = ndappend(b.Clauses, p.parseClause()...)
 	}
 	b.Position = p.pos
 	p.next()
 	return b
 }
 
-// error returns ErrorNode with current position and supplied message.
-func (p *Parser) error(msg string) *ErrorNode {
+// error returns Errorast.Node with current position and supplied message.
+func (p *Parser) error(msg string) *ast.ErrorNode {
 	p.ErrorCount++
-	return &ErrorNode{ Position: p.pos, message: msg }
+	return &ast.ErrorNode{ p.pos, msg }
 }
 
 // errorf is like error with format.
-func (p *Parser) errorf(format string, args ...interface{}) *ErrorNode {
+func (p *Parser) errorf(format string, args ...interface{}) *ast.ErrorNode {
 	return p.error(fmt.Sprintf(format, args...))
 }
 
 // lmexpect is a convenient helper for checking if current lexeme is desired.
-func (p *Parser) lmexpect(lm rune) (err *ErrorNode) {
+func (p *Parser) lmexpect(lm rune) (err *ast.ErrorNode) {
 	if p.k != lm {
 		return p.errorf("expected %s, got %q (%s)",
-			LexemeString(lm), p.lit, LexemeString(p.k))
+			lexer.LexemeString(lm), p.lit, lexer.LexemeString(p.k))
 	}
 	return nil
 }
 
 // append non-nil nodes to a slice and return it.
-func ndappend(slice []Node, nodes ...Node) []Node {
+func ndappend(slice []ast.Node, nodes ...ast.Node) []ast.Node {
 	if nodes == nil {
 		return slice
 	}
