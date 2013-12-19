@@ -1,3 +1,4 @@
+// Package parser implements generating parse trees from lexers.
 package parser
 
 import (

@@ -1,3 +1,4 @@
+// Package util contains utilities used throughout the assembler.
 package util
 
 import "strconv"

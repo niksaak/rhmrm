@@ -1,3 +1,4 @@
+// Package lexer implements breaking utf8 assembly into a set of tokens.
 package lexer
 
 import "github.com/niksaak/rhmrm/asm/util"
