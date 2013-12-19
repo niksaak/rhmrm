@@ -1,5 +1,4 @@
-// Package ast defines parse tree layout for rhmrm assembler.
-package ast
+package compiler
 
 import "github.com/niksaak/rhmrm/asm/lexer"
 

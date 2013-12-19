@@ -3,7 +3,6 @@ package main
 import "fmt"
 
 import (
-	"github.com/niksaak/rhmrm/asm/ast"
 	"github.com/niksaak/rhmrm/asm/compiler"
 	"github.com/niksaak/rhmrm/asm/lexer"
 	"github.com/niksaak/rhmrm/asm/parser"
@@ -12,7 +11,6 @@ import (
 )
 
 var (
-	_ ast.Node
 	_ compiler.Compiler
 	_ lexer.Lexer
 	_ parser.Parser
