@@ -1,11 +1,14 @@
 package parser
 
-import "testing"
+import (
+	"github.com/niksaak/rhmrm/asm/lexer"
+	"testing"
+)
 
 // mkErrFunction returns an ErrorHandler which reports every error
 // to test runner.
-func mkErrFunction(t *testing.T) ErrorHandler {
-	return func(p Position, msg string) {
+func mkErrFunction(t *testing.T) lexer.ErrorHandler {
+	return func(p lexer.Position, msg string) {
 		t.Errorf("%v: %s\n", &p, msg)
 	}
 }
@@ -25,7 +28,7 @@ var asm = `
 func TestParseProgram(t *testing.T) {
 	t.Parallel()
 	err := mkErrFunction(t)
-	l := new(Lexer).Init([]byte(asm), "", err)
+	l := new(lexer.Lexer).Init([]byte(asm), "", err)
 	p := new(Parser).Init(l)
 
 	program := p.ParseProgram()
