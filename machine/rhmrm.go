@@ -65,6 +65,7 @@ const (
 	OP_MOD = 0x18
 	OP_MDI = 0x19
 	OP_INC = 0x1a
+	OP_GBS = 0x1b
 
 	OP_AND = 0x20
 	OP_IOR = 0x21

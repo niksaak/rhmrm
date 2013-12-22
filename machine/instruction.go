@@ -144,6 +144,7 @@ var op_strings = []string{
 	OP_MOD: "mod",
 	OP_MDI: "mdi",
 	OP_INC: "inc",
+	OP_GBS: "gbs",
 
 	OP_AND: "and",
 	OP_IOR: "ior",

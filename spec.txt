@@ -1,6 +1,6 @@
 
 RHMRM - RISCy Handmaid Multistack Register Machine Specification
-Version 0.2.00
+Version 0.2.1
 
 
 ##### SUMMARY ##############################################################
@@ -111,6 +111,7 @@ processed:
  18  mod a, b  Ra := Ra % Rb                         MODulo
  19  mdi a, b  Ra := Ra % Rb                         MoDulo sIgned
  1a  inc a, b  Ra := Ra + b                          Increment
+ 1b  gbs a, b  Ra := gbs(b)                          Greatest Bit Set (integer log base 2)
 
  20  and a, b  Ra := Ra & Rb                         logical AND
  21  ior a, b  Ra := Ra | Rb                         Inclusive OR
