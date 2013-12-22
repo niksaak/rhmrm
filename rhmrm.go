@@ -19,6 +19,5 @@ var (
 )
 
 func main() {
-	fmt.Println("This executable is a linting stub")
-	fmt.Println("if you can run it, you can build rhmrm packages.")
+	fmt.Println("You can run it, so it at least builds. Yaaay.")
 }
