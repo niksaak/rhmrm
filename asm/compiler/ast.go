@@ -1,9 +1,24 @@
 package compiler
 
-import "github.com/niksaak/rhmrm/asm/lexer"
+import (
+	"github.com/niksaak/rhmrm/asm/lexer"
+	"github.com/niksaak/rhmrm/machine"
+)
 
+// Node of a parse tree.
 type Node interface {
 	Pos() lexer.Position
+}
+
+type ByteSpec struct {
+	Offset   int  // offset in slice
+	Size     uint // byte size in bits, zero means all
+	Position int  // offset from words' lsb
+}
+
+type SymbolSpec struct {
+	ByteSpec
+	Name string
 }
 
 type (
@@ -75,6 +90,13 @@ type (
 		Clauses []Node
 	}
 
+	// TextNode is a slice of raw machine words.
+	TextNode struct {
+		lexer.Position
+		Text []machine.Word
+		Symbols []SymbolSpec
+	}
+
 	// ErrorNode represents parse error.
 	ErrorNode struct {
 		lexer.Position
@@ -92,6 +114,7 @@ func (n SymbolNode) Pos() lexer.Position      { return n.Position }
 func (n IntegerNode) Pos() lexer.Position     { return n.Position }
 func (n StringNode) Pos() lexer.Position      { return n.Position }
 func (n BlockNode) Pos() lexer.Position       { return n.Position }
+func (n TextNode) Pos() lexer.Position        { return n.Position }
 func (n ErrorNode) Pos() lexer.Position       { return n.Position }
 
 // ErrorNode additionally implements error interface.
