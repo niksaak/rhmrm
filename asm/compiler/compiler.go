@@ -227,7 +227,7 @@ func (c *Compiler) collectMacrodefs(ns []Node) []Node {
 		c.Macros[name] = fm
 		ns = setNode(ns, i)
 	}
-	return nil // TODO
+	return ns
 }
 
 // collectSymbols populates compiler state with symbol definitions.
