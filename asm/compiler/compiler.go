@@ -95,7 +95,7 @@ func (c *Compiler) expandMacros(ns []Node) []Node {
 		}
 		expanded := c.expandMacros(fm(n.Operands))
 		// replace n with expanded in ns
-		ns = replace(ns, i, expanded...)
+		ns = setNode(ns, i, expanded...)
 	}
 	return ns
 }
@@ -103,6 +103,7 @@ func (c *Compiler) expandMacros(ns []Node) []Node {
 // generateText generates textNodes from instruction nodes.
 func (c *Compiler) generateText(ns []Node) []Node {
 	for i, n := range ns {
+		errorNd := mkErrorNodef(n)
 		n, ok := n.(*InstructionNode)
 		if !ok {
 			continue
@@ -110,17 +111,14 @@ func (c *Compiler) generateText(ns []Node) []Node {
 		// fn, ok := c.Instructions[n.Op]
 		fn := c.InstructionMk(n.Op)
 		if fn == nil {
-			err := &ErrorNode{
-				n.Pos(),
-				"unknown instruction: " + n.Op,
-			}
 			c.ErrorCount++
-			ns = replace(ns, i, err)
+			ns = setNode(ns, i,
+				errorNd("unknown instruction: %s", n.Op))
 			continue
 		}
 		text := fn(n.Operands)
 		// replace n with text in ns
-		ns = replace(ns, i, text...)
+		ns = setNode(ns, i, text...)
 	}
 	return ns
 }
@@ -129,6 +127,7 @@ func (c *Compiler) generateText(ns []Node) []Node {
 func (c *Compiler) processSymbols(ns []Node) []Node {
 	ns = c.collectSymbols(ns)
 	for i, nd := range ns {
+		errorNd := mkErrorNodef(nd)
 		n, ok := nd.(*TextNode)
 		if !ok {
 			continue // skip non-text nodes
@@ -136,12 +135,10 @@ func (c *Compiler) processSymbols(ns []Node) []Node {
 		for _, r := range n.Symbols {
 			v, ok := c.Symbols[r.Name]
 			if !ok {
-				err := &ErrorNode{
-					n.Pos(),
-					"unresolved symbol: " + r.Name,
-				}
 				c.ErrorCount++
-				ns = replace(ns, i, err)
+				ns = setNode(ns, i,
+					errorNd("unresolved symbol: %s",
+						r.Name))
 				continue
 			}
 			setSpec(n.Text, r.ByteSpec, machine.Word(v))
@@ -152,10 +149,11 @@ func (c *Compiler) processSymbols(ns []Node) []Node {
 			for _, s := range n.Symbols {
 				msg += s.Name + " "
 			}
-			err := &ErrorNode{n.Pos(), msg}
-			return replace(ns, i, err)
+			ns = setNode(ns, i, errorNd(msg))
+			c.ErrorCount++
+			continue
 		}
-		ns = replace(ns, i, n)
+		ns = setNode(ns, i, n)
 	}
 	return ns
 }
@@ -179,21 +177,55 @@ func (c *Compiler) words(ns []Node) ([]machine.Word, error) {
 // collectMacrodefs populates compiler state with macro definitions.
 func (c *Compiler) collectMacrodefs(ns []Node) []Node {
 	for i, nd := range ns {
+		errorNd := mkErrorNodef(nd)
+		// macros are defined with the `.macro` directive.
 		md, ok := nd.(*DirectiveNode)
-		switch {
-		case !ok: // macrodefs are declarations
-			continue
-		case md.Op != "macro": // macrodefs start with `macro`
+		if !ok || md.Op != "macro" {
 			continue
 		}
-		if _, ok := md.Operands[0].(*SymbolNode); !ok {
-			err := &ErrorNode{
-				nd.Pos(),
-				"malformed macro definition",
+		// first operand must be a symbol naming a macro
+		ident, ok := md.Operands[0].(*SymbolNode)
+		if !ok {
+			ns = setNode(ns, i,
+				errorNd("malformed macro definition"))
+			c.ErrorCount++
+			continue
+		}
+		// macro name must be unique
+		name := ident.Name
+		if _, ok := c.Symbols[name]; ok {
+			ns = setNode(ns, i,
+				errorNd("macro already defined: %s", name))
+			c.ErrorCount++
+			continue
+		}
+		// last operand of `.macro` is a block containing macro body
+		body, ok := md.Operands[len(md.Operands)-1].(*BlockNode)
+		if !ok {
+			ns = setNode(ns, i, errorNd("missing macro body"))
+			c.ErrorCount++
+			continue
+		}
+		// other operands must be symbols
+		args := make([]*SymbolNode, len(md.Operands)-2)
+		for i, o := range md.Operands[1:len(md.Operands)-1] {
+			if sym, ok := o.(*SymbolNode); ok {
+				args[i] = sym
+			} else {
+				ns = setNode(ns, i,
+					errorNd("not a symbol: %v", o))
+				c.ErrorCount++
+				continue
 			}
-			return replace(ns, i, err)
 		}
-		// TODO
+		// if all above is ok, compile a macro func
+		fm := mkMacroExpander(args, body.Clauses)
+		if fm == nil {
+			ns = setNode(ns, i, errorNd("unable to compile macro"))
+			continue
+		}
+		c.Macros[name] = fm
+		ns = setNode(ns, i)
 	}
 	return nil // TODO
 }
@@ -203,10 +235,10 @@ func (c *Compiler) collectSymbols(ns []Node) []Node {
 	return nil // TODO
 }
 
-// genMacroExpander returns function accepting slice of len(operands) nodes
+// mkMacroExpander returns function which takes slice of len(operands) nodes
 // and returning body with each symbol in operands replaced by corresponding
 // node from args.
-func (c *Compiler) genMacroExpander(
+func mkMacroExpander(
 	operands []*SymbolNode,
 	body []Node,
 ) TranslatorFunc {
@@ -237,8 +269,25 @@ func (c *Compiler) genMacroExpander(
 	}
 }
 
-// replace function replaces slice[n] with nodes.
-func replace(slice []Node, n int, nodes ...Node) []Node {
+// mkErrorNodef creates a function which takes format args and returns an
+// ErrorNode pointer.
+func mkErrorNodef(datum Node) func(string, ...interface{}) *ErrorNode {
+	return func(msg string, args ...interface{}) *ErrorNode {
+		return &ErrorNode{
+			datum.Pos(),
+			fmt.Sprintf(msg, args),
+			datum,
+		}
+	}
+}
+
+// setNode function replaces slice[n] with nodes or, when no nodes
+// are supplied, deletes slice[n] from slice.
+func setNode(slice []Node, n int, nodes ...Node) []Node {
+	if len(nodes) == 0 {
+		copy(slice[:n], slice[:n+1])
+		return slice[:len(slice)-1]
+	}
 	if len(nodes) == 1 { // no need to extend the slice in this case
 		slice[n] = nodes[0]
 		return slice
