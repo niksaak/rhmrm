@@ -95,7 +95,7 @@ func (c *Compiler) expandMacros(ns []Node) []Node {
 		}
 		expanded := c.expandMacros(fm(n.Operands))
 		// replace n with expanded in ns
-		ns = append(ns[:i], append(expanded, ns[i+1:]...)...)
+		ns = replace(ns, i, expanded...)
 	}
 	return ns
 }
@@ -115,14 +115,12 @@ func (c *Compiler) generateText(ns []Node) []Node {
 				"unknown instruction: " + n.Op,
 			}
 			c.ErrorCount++
-			// replace n with error node
-			ns = append(ns[:i],
-				append([]Node{err}, ns[i+1:]...)...)
+			ns = replace(ns, i, err)
 			continue
 		}
 		text := fn(n.Operands)
 		// replace n with text in ns
-		ns = append(ns[:i], append(text, ns[i+1:]...)...)
+		ns = replace(ns, i, text...)
 	}
 	return ns
 }
@@ -143,8 +141,7 @@ func (c *Compiler) processSymbols(ns []Node) []Node {
 					"unresolved symbol: " + r.Name,
 				}
 				c.ErrorCount++
-				ns = append(ns[:i],
-					append([]Node{err}, ns[i+1:]...)...)
+				ns = replace(ns, i, err)
 				continue
 			}
 			setSpec(n.Text, r.ByteSpec, machine.Word(v))
@@ -156,10 +153,9 @@ func (c *Compiler) processSymbols(ns []Node) []Node {
 				msg += s.Name + " "
 			}
 			err := &ErrorNode{n.Pos(), msg}
-			return append(ns[:i],
-				append([]Node{err}, ns[i:]...)...)
+			return replace(ns, i, err)
 		}
-		ns = append(ns[:i], append([]Node{n}, ns[i+1:]...)...)
+		ns = replace(ns, i, n)
 	}
 	return ns
 }
@@ -195,8 +191,7 @@ func (c *Compiler) collectMacrodefs(ns []Node) []Node {
 				nd.Pos(),
 				"malformed macro definition",
 			}
-			return append(ns[:i],
-				append([]Node{err}, ns[i+1:]...)...)
+			return replace(ns, i, err)
 		}
 		// TODO
 	}
@@ -206,6 +201,16 @@ func (c *Compiler) collectMacrodefs(ns []Node) []Node {
 // collectSymbols populates compiler state with symbol definitions.
 func (c *Compiler) collectSymbols(ns []Node) []Node {
 	return nil // TODO
+}
+
+// replace function replaces slice[n] with nodes.
+func replace(slice []Node, n int, nodes ...Node) []Node {
+	if len(nodes) == 1 { // no need to extend the slice in this case
+		slice[n] = nodes[0]
+		return slice
+	} else {
+		return append(slice[:n], append(nodes, slice[n+1:]...)...)
+	}
 }
 
 // setSpec replaces range of bits in text defined by spec with those of val.
