@@ -292,10 +292,10 @@ func (p *Parser) parseBlock() (n compiler.Node) {
 	return b
 }
 
-// error returns Errorcompiler.Node with current position and supplied message.
+// error returns Error compiler.Node with current position and supplied message.
 func (p *Parser) error(msg string) *compiler.ErrorNode {
 	p.ErrorCount++
-	return &compiler.ErrorNode{p.pos, msg}
+	return &compiler.ErrorNode{p.pos, msg, nil}
 }
 
 // errorf is like error with format.

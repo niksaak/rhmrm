@@ -1,6 +1,7 @@
 package compiler
 
 import (
+	"fmt"
 	"github.com/niksaak/rhmrm/asm/lexer"
 	"github.com/niksaak/rhmrm/machine"
 )
@@ -101,6 +102,7 @@ type (
 	ErrorNode struct {
 		lexer.Position
 		Message string
+		Datum Node
 	}
 )
 
@@ -118,6 +120,10 @@ func (n TextNode) Pos() lexer.Position        { return n.Position }
 func (n ErrorNode) Pos() lexer.Position       { return n.Position }
 
 // ErrorNode additionally implements error interface.
-func (n ErrorNode) Error() string {
-	return n.Message
+func (n ErrorNode) Error() (s string) {
+	s = n.Message
+	if n.Datum != nil {
+		s += fmt.Sprintf("; DATUM: %v", n.Datum)
+	}
+	return s
 }
