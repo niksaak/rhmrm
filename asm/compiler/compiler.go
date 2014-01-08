@@ -111,9 +111,9 @@ func (c *Compiler) generateText(ns []Node) []Node {
 		// fn, ok := c.Instructions[n.Op]
 		fn := c.InstructionMk(n.Op)
 		if fn == nil {
-			c.ErrorCount++
 			ns = setNode(ns, i,
 				errorNd("unknown instruction: %s", n.Op))
+			c.ErrorCount++
 			continue
 		}
 		text := fn(n.Operands)
@@ -135,10 +135,10 @@ func (c *Compiler) processSymbols(ns []Node) []Node {
 		for _, r := range n.Symbols {
 			v, ok := c.Symbols[r.Name]
 			if !ok {
-				c.ErrorCount++
 				ns = setNode(ns, i,
 					errorNd("unresolved symbol: %s",
 						r.Name))
+				c.ErrorCount++
 				continue
 			}
 			setSpec(n.Text, r.ByteSpec, machine.Word(v))
@@ -222,6 +222,7 @@ func (c *Compiler) collectMacrodefs(ns []Node) []Node {
 		fm := mkMacroExpander(args, body.Clauses)
 		if fm == nil {
 			ns = setNode(ns, i, errorNd("unable to compile macro"))
+			c.ErrorCount++
 			continue
 		}
 		c.Macros[name] = fm
